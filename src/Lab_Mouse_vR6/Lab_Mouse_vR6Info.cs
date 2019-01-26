@@ -10,7 +10,7 @@ namespace Lab_Mouse_vR6
         {
             get
             {
-                return "LabMousevR6";
+                return "Lab_Mouse_vR6";
             }
         }
         public override Bitmap Icon
