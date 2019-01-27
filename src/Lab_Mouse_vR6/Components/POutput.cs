@@ -31,7 +31,7 @@ namespace Lab_Mouse_vR6.Components
         public POutput()
           : base(new GH_InstanceDescription("PDF Output", "POutput",
               "bla bla",
-              "Lab Mouse", "Modeling"))
+              "Lab Mouse vR6", "Modeling"))
         {
             // default starting distribution
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 };
@@ -57,7 +57,7 @@ namespace Lab_Mouse_vR6.Components
         /// Gets the unique ID for this component. Do not change this ID after release.
         public override Guid ComponentGuid
         {
-            get { return new Guid("32fd8734-4bba-4b7d-9006-af3b38b889cb"); }
+            get { return new Guid("05b6c687-72c1-470e-8618-bb17fd7b02c6"); }
         }
 
         // create component display attributes

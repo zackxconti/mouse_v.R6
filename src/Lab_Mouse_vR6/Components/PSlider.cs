@@ -47,7 +47,7 @@ namespace Lab_Mouse_vR6.Components
             base.Name = "PDF Slider";
             base.NickName = "PSlider";
             base.Description = "bla bla ";
-            base.Category = "Lab Mouse";
+            base.Category = "Lab Mouse vR6";
             base.SubCategory = "Modeling";
 
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }; // default starting distribution
@@ -176,7 +176,7 @@ namespace Lab_Mouse_vR6.Components
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("44a1a9c7-0eef-4cb1-b6de-c30522eb0aa6"); }
+            get { return new Guid("00535b1c-f1f0-4760-aec6-4f3a521716b0"); }
         }
 
     }
