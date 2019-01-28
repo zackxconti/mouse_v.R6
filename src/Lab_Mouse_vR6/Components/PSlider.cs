@@ -13,13 +13,12 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
-using Lab_Mouse_vR6.Properties;
-using Lab_Mouse_vR6.Components;
+using Lab_Mouse.Components;
 
 
 
 
-namespace Lab_Mouse_vR6.Components
+namespace Lab_Mouse.Components
 {
 
     public class PSlider : Grasshopper.Kernel.Special.GH_NumberSlider
@@ -47,7 +46,7 @@ namespace Lab_Mouse_vR6.Components
             base.Name = "PDF Slider";
             base.NickName = "PSlider";
             base.Description = "bla bla ";
-            base.Category = "Lab Mouse vR6";
+            base.Category = "Lab Mouse";
             base.SubCategory = "Modeling";
 
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }; // default starting distribution
@@ -163,8 +162,6 @@ namespace Lab_Mouse_vR6.Components
             get
             {
                 // You can add image files to your project resources and access them like this:
-                //return Lab_Mouse_vR6.Properties.Resources.PSlider_icon;
-
                 return null;
             }
         }
