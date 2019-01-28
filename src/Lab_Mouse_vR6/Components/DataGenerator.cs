@@ -15,6 +15,7 @@ using System.Text;
 using System.Drawing.Printing;
 
 
+
 namespace Lab_Mouse.Components
 {
     public class DataGenerator : GH_Component
@@ -25,7 +26,10 @@ namespace Lab_Mouse.Components
         public string sampling;
         public bool generate_flag;
         public List<Grasshopper.Kernel.Special.GH_NumberSlider> pluggedSliders;
-       // public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
+        public CSVtype csvdata;
+        public List<string> pluggedSliderNames;
+        public List<string> pluggedOutputNames;
+        // public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
         //public List<Grasshopper.GUI.GH_Slider> pluggedSliders;
 
         public DataGenerator()
@@ -36,14 +40,29 @@ namespace Lab_Mouse.Components
 
             // identify plugged sliders and store them for later reference
             var inputs = this.Params.Input[0].Sources;
+            this.pluggedSliderNames = new List<string>();
+            this.pluggedOutputNames = new List<string>();
+
             for (int i=0; i < inputs.Count; i++)
             {
                 GH_NumberSlider s = inputs[i] as GH_NumberSlider;
                 this.pluggedSliders.Add(s);
+               // this.pluggedSliderNames.Add(s.NickName.ToString());
+               
                 //this.pluggedSliders.Add(inputs[i].Attributes.GetTopLevel.DocObject);
                 //this.pluggedSliders.Add(inputs[i] as Grasshopper.GUI.GH_Slider);
 
             }
+
+            foreach (IGH_Param source in Params.Input[0].Sources)
+            {
+                GH_NumberSlider slider = source as GH_NumberSlider;
+                var name = source.NickName;
+                //this.pluggedSliderNames.Add(name.ToString());
+
+            }
+
+
 
         }
 
@@ -63,7 +82,9 @@ namespace Lab_Mouse.Components
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddNumberParameter("CSV", "csv", "input-output csv data", GH_ParamAccess.item);
+            pManager.AddGenericParameter("CSV", "csv", "input-output csv data", GH_ParamAccess.item);
+            // change to GH_ParamAccess.List --> in case of multiple outputs, we want to be able to output (and write to txt file) multiple CSV file types, one for each output. 
+            // OR MAYBE NOT -- we want to store output columns in same CSV - this is needed to build metamodel with multiple outputs. 
         }
 
         public override void CreateAttributes()
@@ -82,6 +103,9 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+
+            DA.SetData(0, this.csvdata);
+
             //this.pluggedSliders[0].Slider.Value = (decimal)0;
 
             //GH_NumberSlider ghSlider = Params.Input[0].Sources[0] as GH_NumberSlider;
@@ -287,6 +311,8 @@ namespace Lab_Mouse.Components
             ////// generate sampling data based on plugged sliders //////
             var csv = new StringBuilder();
 
+            List<string> names = new List<string>();
+
             foreach (IGH_Param source in Params.Input[0].Sources)
             {
                 GH_NumberSlider slider = source as GH_NumberSlider;
@@ -304,6 +330,7 @@ namespace Lab_Mouse.Components
                 //slider_ranges.Add(range);
 
                 var nickname = source.NickName;
+                names.Add(nickname.ToString() ); // Add slider name to global list 
                 var minimum = (slider.Slider.Minimum).ToString("0.00");
                 var maximum = (slider.Slider.Maximum).ToString("0.00");
          
@@ -312,6 +339,8 @@ namespace Lab_Mouse.Components
 
                 // now write slider_ranges list to csv file and pass as parameter for python system call 
             }
+
+            this.pluggedSliderNames = names;
 
             //string direc = this.Params.Input[2].Sources[0].VolatileData.ToString(); // need to check what this is returning 
             //Grasshopper.Kernel.Parameters.Param_String param = (Grasshopper.Kernel.Parameters.Param_String)this.Params.Input[2];
@@ -323,10 +352,11 @@ namespace Lab_Mouse.Components
             //GH_String dat = data.AllData(true);
 
             //string direc = null;
+            // access directory string 
             foreach (GH_String dat in Params.Input[2].Sources[0].VolatileData.AllData(true))
             //GH_String dat = data.AllData(true).GetEnumerator.data;
             {
-                string direc = dat.Value;
+                string directory = dat.Value;
             
 
                 //    Grasshopper.Kernel.IGH_Param sourceZ = this.Params.Input[2].Sources[0].VolatileData; //ref for input where a boolean or a button is connected
@@ -334,11 +364,7 @@ namespace Lab_Mouse.Components
                 //string direc = text.Value;
                 //string ranges_filepath = string.Format("{0}\\{1}", dir, "\\rangesz.txt");
                 //string ranges_filepath = string.Concat(direc, "\\rangesz.txt");
-                //string ranges_filepath = Path.Combine(direc, "rangesz2.txt");
-                string ranges_filepath = "C:\\Users\\zac067\\Desktop\\rangesz2.txt";
-                //string combined = Path.Combine(direc, Path.GetFileName(fileName));
-
-                //string ranges_filepath = "C:\\Users\\tij\\Desktop\\testza.txt";
+                string ranges_filepath = Path.Combine(directory, "ranges.txt");
 
                 File.WriteAllText(ranges_filepath, csv.ToString());
 
@@ -347,31 +373,24 @@ namespace Lab_Mouse.Components
                 //string samplingscript_filepath = string.Concat(dir, "\\intercommunication_script.py");
                 //string samplingscript_filepath = Path.Combine(direc, "intercommunication_script.py");
 
-                string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component
+                string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
                 //string samplingscript_filepath = Path.Combine(direc, "intercommunication_script.py");
 
 
                 List <System.Object> Arguments = new List<System.Object>();
                 Arguments.Add(ranges_filepath);
             
+                // Generate samples by calling sampling Python script //
+                List<List<double>> Samples = runPythonScript(samplingscript_filepath, Arguments);
 
-                List<List<double>> Samples = new List<List<double>>();
-                List<List<double>> outputdata = runPythonScript(samplingscript_filepath, Arguments);
-
-                for (int j=0; j < outputdata.Count; j++)
+                // Print samples to Rhino Console 
+                for (int j=0; j < Samples.Count; j++)
                 {
-                    //List<double> l = new List<double>();
-                    for (int k=0; k < outputdata[j].Count; k++)
-                    {
-                       // Samples[j].Add((double)outputdata[0][0]);
-                        Console.WriteLine(outputdata[j][k]);
-                    }
-                    //Samples.Add(l);
+                    for (int k=0; k < Samples[j].Count; k++)
+                    {                     
+                        Console.WriteLine(Samples[j][k]);
+                    }       
                 }
-
-
-                Console.Write(Samples);
-            
 
                 if (sliders.Count == 0)
                 {
@@ -382,75 +401,93 @@ namespace Lab_Mouse.Components
                 // Similarly, we need to find which number parameter is to be used as the measure.
                 // We only accept a single one, and it may only be a Param_Number (you may want to make
                 // this more flexible in production code).
-                if (Params.Input[1].SourceCount != 1)
+                //if (Params.Input[1].SourceCount != 1)
+                //{
+                //   Rhino.RhinoApp.Write("Exactly one parameter must be connected to the sim output input.");
+                //   return;
+                //}
+
+                var outputs = Params.Input[1].Sources;
+                List<Param_Number> pluggedOutputs = new List<Param_Number>();
+                for (int o = 0; o < outputs.Count; o++)
                 {
-                    Rhino.RhinoApp.Write("Exactly one parameter must be connected to the Y input.");
-                    return;
+                    pluggedOutputs.Add(outputs[o] as Param_Number);
+                    this.pluggedOutputNames.Add(outputs[o].NickName.ToString());
                 }
-                Param_Number outcome = Params.Input[1].Sources[0] as Param_Number;
-                if (outcome == null)
+
+                for (int o=0; o < pluggedOutputs.Count; o++)
                 {
-                    Rhino.RhinoApp.Write("Y input parameter is not of type Param_Number.");
-                    return;
+                    if (pluggedOutputs[o] == null)
+                    {
+                        Rhino.RhinoApp.Write("One of the plugged output parameters is not of type Param_Number.");
+                        return;
+                    }
                 }
+                //Param_Number outcome = Params.Input[1].Sources[0] as Param_Number;
 
                 // Now that we have a bunch of sliders and a measure parameter, 
                 // we can generate a bunch of solutions.
-                // Temporary: We will run 100 solutions, moving all sliders each time.
                 // We will also harvest the resulting outcome and print each state to the command line.
-                // TO replace with sampling algorithm
-                //int csvlen = 
-            
-                //List<List<double>> Samples = new List<List<double>>();
 
+                // create empty CSV type containers for each output
+                //List<CSVtype> CSVoutputs = new List<CSVtype>();
+                //for (int o = 1; o < pluggedOutputs.Count; o++)
+                //{
+                //    List<List<double>> csvdata = new List<List<double>>();
+                //    CSVoutputs.Add(new CSVtype(this.pluggedSliderNames, csvdata));
+                //}
 
+                List<List<double>> csvd = new List<List<double>>();
 
-                for (int i = 0; i < outputdata.Count; i++)
+                // Assign Samples to sliders as SliderValues 
+                // loop through list of Samples
+                for (int i = 0; i < Samples.Count; i++)
                 {
-                    //double t = 0.01 * i;
-                    //int index = 0;
-                    for (int j=0; j<sliders.Count; j++)
+                    for (int j = 0; j < sliders.Count; j++)
                     {
-                       // GH_NumberSlider slider = sliders[i]
-                        sliders[j].SetSliderValue((decimal)outputdata[i][j]); // does not work 
+                        sliders[j].SetSliderValue((decimal)Samples[i][j]); // does not work 
                     }
-                    //foreach (GH_NumberSlider slider in sliders)
-                
-                        //slider.TickValue = (int)(slider.TickCount * t);
-                        //double value = 
-                        //Console.Write(Samples[i][index]);
-
-                        //slider.TickValue = (int)outputdata[i][index];
-                        //slider.SetSliderValue((decimal)outputdata[i][index]); // does not work 
-     
-                        //index ++;
-                    //he
-                
-               
-
 
                     doc.NewSolution(false);
 
-                    // Now harvest the actual slider values.
-                    List<string> values = new List<string>();
-                    foreach (GH_NumberSlider slider in sliders)
-                        values.Add(slider.Slider.GripText);
+                    List<double> csvrow = new List<double>();
 
-                    // And finally harvest the measure value. This can be made more flexible.
-                    string measure = "no values";
-                    var volatileData = outcome.VolatileData as GH_Structure<GH_Number>;
-                    if (volatileData != null)
+                    // For each Sample vector, harvest the actual slider values.
+                    List<string> sliderValuesTxt = new List<string>();
+                    List<double> sliderValues = new List<double>();
+                    foreach (GH_NumberSlider slider in sliders)
                     {
-                        if (volatileData.DataCount == 1)
-                            measure = string.Format("{0:0.0000}", volatileData.Branches[0][0].Value);
-                        else
-                            measure = "many values";
+                        sliderValuesTxt.Add(slider.Slider.GripText); // save as text for printing to console                
+                        csvrow.Add((double)slider.Slider.Value); // cast slider value from decimal to double 
                     }
 
-                    Rhino.RhinoApp.WriteLine("({0}) = {1:0.00000}", string.Join(", ", values), measure);
 
+                    // For each sample vector, harvest response output. This can be made more flexible.
+
+                    string measure = "no values yet";
+
+                    // for each output that is plugged in, store each output value 
+                    for (int o = 0; o < pluggedOutputs.Count; o++)
+                    {
+                        // access stored output value
+                        var volatileData = pluggedOutputs[o].VolatileData as GH_Structure<GH_Number>;
+
+                        if (volatileData != null)
+                        {
+                            csvrow.Add((double)volatileData.Branches[0][0].Value); // store output value in csv
+                            measure = string.Format("{0:0.0000}", volatileData.Branches[0][0].Value); // for printing to console                   
+                        }
+                    }
+
+                    // Add csv row to csvdata 
+                    csvd.Add(csvrow);
+
+                    Rhino.RhinoApp.WriteLine("({0}) = {1:0.00000}", string.Join(", ", sliderValuesTxt), measure);                    
                 }
+                // Update CSVtype with generated csvdata
+                this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd);
 
+                this.csvdata.writeCSV("C:\\Users\\zac067\\Desktop");
             }
         }
 
