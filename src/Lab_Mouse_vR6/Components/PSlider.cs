@@ -13,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
-using Lab_Mouse.Properties;
 using Lab_Mouse.Components;
 
 
@@ -163,9 +162,7 @@ namespace Lab_Mouse.Components
             get
             {
                 // You can add image files to your project resources and access them like this:
-                return Lab_Mouse.Properties.Resources.PSlider_icon;
-
-                //return null;
+                return null;
             }
         }
 
@@ -192,7 +189,7 @@ namespace Lab_Mouse.Components
     public class PSliderAttributes : Grasshopper.Kernel.Special.GH_NumberSliderAttributes
     {
 
-        private List<double> probabilities;
+        //private List<double> probabilities;
         PSlider own;
         // private float minimum;
 
@@ -239,7 +236,7 @@ namespace Lab_Mouse.Components
         private PointF[] getPts(List<double> Probabilities)
 
         {
-            int n = probabilities.Count + 4;
+            int n = own.probabilities.Count + 4;
             PointF[] points = new PointF[n];
 
             int width_nickname = GH_FontServer.StringWidth(Owner.NickName, GH_FontServer.Standard);
@@ -249,7 +246,7 @@ namespace Lab_Mouse.Components
             points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 11, this.Pivot.Y - 7);
 
 
-            if (probabilities.Count != 0)
+            if (own.probabilities.Count != 0)
             {
                 // routine to get drawing coordinates based on bin  probabilities
                 for (int i = 0; i < Probabilities.Count; i++)

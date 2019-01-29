@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Components\CSVtype.cs" />
     <Compile Include="Components\DataGenerator.cs" />
+    <Compile Include="Components\ModelBuilder.cs" />
     <Compile Include="Components\POutput.cs" />
     <Compile Include="Components\PSlider.cs" />
     <Compile Include="Lab_Mouse_vR6Info.cs" />

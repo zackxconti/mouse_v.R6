@@ -13,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
-using Lab_Mouse.Properties;
 using Lab_Mouse.Components;
 
 namespace Lab_Mouse.Components

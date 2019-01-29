@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CsvHelper;
+
 
 
     public class CSVtype
@@ -52,7 +52,7 @@ using CsvHelper;
             //Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
             // Write the string array to a new file named "WriteLines.txt".
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "WriteLines.txt")))
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "SimulationData.txt")))
             {
                 foreach (string line in lines)
                     outputFile.WriteLine(line);
