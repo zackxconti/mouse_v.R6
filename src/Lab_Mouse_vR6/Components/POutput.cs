@@ -13,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
-using Lab_Mouse.Properties;
 using Lab_Mouse.Components;
 
 namespace Lab_Mouse.Components
@@ -35,7 +34,7 @@ namespace Lab_Mouse.Components
               "Lab Mouse", "Modeling"))
         {
             // default starting distribution
-            this.probabilities = new List<double> { 0.0, 0.1, 0.7, 0.9 };
+            this.probabilities = new List<double> { 0.0 };
             this.draw_flag = "h";
         }
 

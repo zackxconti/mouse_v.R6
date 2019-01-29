@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-namespace Lab_Mouse_vR6.Components
+namespace Lab_Mouse.Components
 {
     public class ModelBuilder : GH_Component
     {
