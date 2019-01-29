@@ -189,7 +189,7 @@ namespace Lab_Mouse.Components
     public class PSliderAttributes : Grasshopper.Kernel.Special.GH_NumberSliderAttributes
     {
 
-        private List<double> probabilities;
+        //private List<double> probabilities;
         PSlider own;
         // private float minimum;
 
@@ -236,7 +236,7 @@ namespace Lab_Mouse.Components
         private PointF[] getPts(List<double> Probabilities)
 
         {
-            int n = probabilities.Count + 4;
+            int n = own.probabilities.Count + 4;
             PointF[] points = new PointF[n];
 
             int width_nickname = GH_FontServer.StringWidth(Owner.NickName, GH_FontServer.Standard);
@@ -246,7 +246,7 @@ namespace Lab_Mouse.Components
             points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 11, this.Pivot.Y - 7);
 
 
-            if (probabilities.Count != 0)
+            if (own.probabilities.Count != 0)
             {
                 // routine to get drawing coordinates based on bin  probabilities
                 for (int i = 0; i < Probabilities.Count; i++)

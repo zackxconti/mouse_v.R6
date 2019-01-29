@@ -9,7 +9,6 @@ using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
-using CsvHelper;
 using System.IO;
 using System.Text;
 using System.Drawing.Printing;
@@ -23,9 +22,9 @@ namespace Lab_Mouse.Components
         /// <summary>
         /// Initializes a new instance of the MyComponent1 class.
         /// </summary>
-        public string sampling;
+        public string samplingAlgorithm;
         public bool generate_flag;
-        public List<Grasshopper.Kernel.Special.GH_NumberSlider> pluggedSliders;
+        public List<GH_NumberSlider> pluggedSliders;
         public CSVtype csvdata;
         public List<string> pluggedSliderNames;
         public List<string> pluggedOutputNames;
@@ -33,35 +32,19 @@ namespace Lab_Mouse.Components
         //public List<Grasshopper.GUI.GH_Slider> pluggedSliders;
 
         public DataGenerator()
-          : base("DataGenerator", "datagen",
-              "Generates CSV data",
-              "Lab Mouse vR6", "Data")
+          : base("DataGenerator", 
+                "datagen",
+                "Generates CSV data",
+                "Lab Mouse", 
+                "Data")
         {
 
             // identify plugged sliders and store them for later reference
             var inputs = this.Params.Input[0].Sources;
             this.pluggedSliderNames = new List<string>();
             this.pluggedOutputNames = new List<string>();
-
-            for (int i=0; i < inputs.Count; i++)
-            {
-                GH_NumberSlider s = inputs[i] as GH_NumberSlider;
-                this.pluggedSliders.Add(s);
-               // this.pluggedSliderNames.Add(s.NickName.ToString());
-               
-                //this.pluggedSliders.Add(inputs[i].Attributes.GetTopLevel.DocObject);
-                //this.pluggedSliders.Add(inputs[i] as Grasshopper.GUI.GH_Slider);
-
-            }
-
-            foreach (IGH_Param source in Params.Input[0].Sources)
-            {
-                GH_NumberSlider slider = source as GH_NumberSlider;
-                var name = source.NickName;
-                //this.pluggedSliderNames.Add(name.ToString());
-
-            }
-
+            this.pluggedSliders = new List<GH_NumberSlider>();
+            this.samplingAlgorithm = "sobol"; // by default,sobol sequece is used 
 
 
         }
@@ -89,11 +72,9 @@ namespace Lab_Mouse.Components
 
         public override void CreateAttributes()
         {
-            
             //this.m_attributes = (IGH_Attributes)new DataGeneratorAttributes(this, probabilities);
-            this.m_attributes = new Attributes_Custom(this, this.pluggedSliders);
-            
-            
+            //int num = this.Params.Input[0].SourceCount;
+            this.m_attributes = new Attributes_Custom(this);
         }
 
 
@@ -103,20 +84,7 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-
             DA.SetData(0, this.csvdata);
-
-            //this.pluggedSliders[0].Slider.Value = (decimal)0;
-
-            //GH_NumberSlider ghSlider = Params.Input[0].Sources[0] as GH_NumberSlider;
-            //ghSlider.SetSliderValue(0);
-
-            // here call sampling function that returns input csv
-            // here write logic for calling sliders, batch running simulations and recording input and output values into a csv file 
-
-
-
-
         }
 
         /// <summary>
@@ -132,11 +100,6 @@ namespace Lab_Mouse.Components
             }
         }
 
-
-
-
-
-
         /// <summary>
         /// Gets the unique ID for this component. Do not change this ID after release.
         /// </summary>
@@ -146,24 +109,30 @@ namespace Lab_Mouse.Components
         }
         public void menuItemLatin(object sender, EventArgs e)
         {
-            this.sampling = "latin";
+            this.samplingAlgorithm = "latin";
         }
 
         public void menuItemSobol(object sender, EventArgs e)
         {
-            this.sampling = "sobol";
+            this.samplingAlgorithm = "sobol";
         }
 
         public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
         {
+            ToolStripMenuItem SamplerDropdown = GH_DocumentObject.Menu_AppendItem(menu, "Sampling Algorithm");
+
+            Menu_AppendItem(SamplerDropdown.DropDown, "Sobol Sequence", menuItemSobol);
+            Menu_AppendItem(SamplerDropdown.DropDown, "Latin Hypercube", menuItemLatin);
+            Menu_AppendItem(SamplerDropdown.DropDown, "MDRM (efficient)", null);
+            Menu_AppendItem(SamplerDropdown.DropDown, "Factorial DOE (efficient)", null);
+
 
             //Menu_AppendSeperator(menu);
-            menu.Items.Add("Latin Hypercube Sampling", null, menuItemLatin);
+            //menu.Items.Add("Latin Hypercube Sampling", null, menuItemLatin);
+           
             //Menu_AppendSeperator(menu);
-            menu.Items.Add("Sobol sampling", null, menuItemSobol);
+            //menu.Items.Add("Sobol sampling", null, menuItemSobol);
             base.AppendAdditionalMenuItems(menu);
-            
-
         }
 
         protected override void AppendAdditionalComponentMenuItems(ToolStripDropDown menu)
@@ -177,7 +146,6 @@ namespace Lab_Mouse.Components
 
         public List<List<double>> readcsv(string filename)
         {
-            //const string f = "TextFile1.txt";
 
             List<List<double>> data = new List<List<double>>();
 
@@ -195,8 +163,6 @@ namespace Lab_Mouse.Components
                 while ((line = r.ReadLine()) != null)
                 {
                     // 4
-                    // Insert logic here.
-                    // ...
                     // The "line" value is a line in the file.
                     // Add it to our List.
                     lines.Add(line);
@@ -250,15 +216,12 @@ namespace Lab_Mouse.Components
                 // then read from the filepath as a parameter in python
                 //info.Arguments += " \"" + argument.ToString() + "\"";
                 // convert inputs into csv file and then IPC filepath as system input, then open in python as filepath and read inputs from csv
-
             }
             
-
             Console.Write("Send: {0}", info.Arguments);
 
             System.Diagnostics.Process python = new System.Diagnostics.Process();
             python.StartInfo = info;
-
             python.Start();
 
             //string returned;
@@ -287,7 +250,6 @@ namespace Lab_Mouse.Components
                 }
             }
             catch { }
-
 
             python.WaitForExit();
 
@@ -322,12 +284,7 @@ namespace Lab_Mouse.Components
                     return;
                 }
                 sliders.Add(slider);
-
-                //List<string> range = new List<string>();
-                //range.Add(source.NickName);
-                //range.Add((slider.Slider.Minimum).ToString("0.00"));
-                //range.Add((slider.Slider.Maximum).ToString("0.00"));
-                //slider_ranges.Add(range);
+                this.pluggedSliders.Add(slider);
 
                 var nickname = source.NickName;
                 names.Add(nickname.ToString() ); // Add slider name to global list 
@@ -351,10 +308,10 @@ namespace Lab_Mouse.Components
             
             //GH_String dat = data.AllData(true);
 
-            //string direc = null;
+            
             // access directory string 
             foreach (GH_String dat in Params.Input[2].Sources[0].VolatileData.AllData(true))
-            //GH_String dat = data.AllData(true).GetEnumerator.data;
+           
             {
                 string directory = dat.Value;
             
@@ -362,23 +319,24 @@ namespace Lab_Mouse.Components
                 //    Grasshopper.Kernel.IGH_Param sourceZ = this.Params.Input[2].Sources[0].VolatileData; //ref for input where a boolean or a button is connected
                 //Grasshopper.Kernel.Types.GH_String text = sourceZ as Grasshopper.Kernel.Types.GH_String;
                 //string direc = text.Value;
-                //string ranges_filepath = string.Format("{0}\\{1}", dir, "\\rangesz.txt");
-                //string ranges_filepath = string.Concat(direc, "\\rangesz.txt");
+ 
                 string ranges_filepath = Path.Combine(directory, "ranges.txt");
 
                 File.WriteAllText(ranges_filepath, csv.ToString());
 
                 /// run python script to generate samples ///
-                //string samplingscript_filepath = string.Format("{0}\\{1}", dir, "\\intercommunication_script.py");
-                //string samplingscript_filepath = string.Concat(dir, "\\intercommunication_script.py");
-                //string samplingscript_filepath = Path.Combine(direc, "intercommunication_script.py");
+                string samplingscript_filepath = Path.Combine(directory, "intercommunication_script.py");
 
-                string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
-                //string samplingscript_filepath = Path.Combine(direc, "intercommunication_script.py");
-
+                //string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
 
                 List <System.Object> Arguments = new List<System.Object>();
                 Arguments.Add(ranges_filepath);
+
+                //string type = "sobol";
+                Arguments.Add(this.samplingAlgorithm);
+
+                int samplesize = 100;
+                Arguments.Add(samplesize.ToString());
             
                 // Generate samples by calling sampling Python script //
                 List<List<double>> Samples = runPythonScript(samplingscript_filepath, Arguments);
@@ -401,11 +359,6 @@ namespace Lab_Mouse.Components
                 // Similarly, we need to find which number parameter is to be used as the measure.
                 // We only accept a single one, and it may only be a Param_Number (you may want to make
                 // this more flexible in production code).
-                //if (Params.Input[1].SourceCount != 1)
-                //{
-                //   Rhino.RhinoApp.Write("Exactly one parameter must be connected to the sim output input.");
-                //   return;
-                //}
 
                 var outputs = Params.Input[1].Sources;
                 List<Param_Number> pluggedOutputs = new List<Param_Number>();
@@ -429,13 +382,6 @@ namespace Lab_Mouse.Components
                 // we can generate a bunch of solutions.
                 // We will also harvest the resulting outcome and print each state to the command line.
 
-                // create empty CSV type containers for each output
-                //List<CSVtype> CSVoutputs = new List<CSVtype>();
-                //for (int o = 1; o < pluggedOutputs.Count; o++)
-                //{
-                //    List<List<double>> csvdata = new List<List<double>>();
-                //    CSVoutputs.Add(new CSVtype(this.pluggedSliderNames, csvdata));
-                //}
 
                 List<List<double>> csvd = new List<List<double>>();
 
@@ -486,30 +432,25 @@ namespace Lab_Mouse.Components
                 }
                 // Update CSVtype with generated csvdata
                 this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd);
-
-                this.csvdata.writeCSV("C:\\Users\\zac067\\Desktop");
+                
+                // Write csv data to text file in user-specified directory
+                this.csvdata.writeCSV(directory);
             }
         }
-
-
     }
 
 
 
     public class Attributes_Custom : Grasshopper.Kernel.Attributes.GH_ComponentAttributes
     {
-        public List<Grasshopper.Kernel.Special.GH_NumberSlider> pluggedSliders;
-        //public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
-        //public List<Grasshopper.GUI.GH_Slider> pluggedSliders;
 
-        public Attributes_Custom(GH_Component owner, List<Grasshopper.Kernel.Special.GH_NumberSlider> sliders)
-        //public Attributes_Custom(GH_Component owner, List<Grasshopper.Kernel.IGH_DocumentObject> sliders)
-        //public Attributes_Custom(GH_Component owner, List<Grasshopper.GUI.GH_Slider> sliders)
-            //public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
+        DataGenerator own;
+
+
+        public Attributes_Custom(DataGenerator owner)
 
             : base(owner) {
-
-            this.pluggedSliders = sliders;
+            own = owner;
             
         }
 
@@ -550,58 +491,24 @@ namespace Lab_Mouse.Components
                 System.Drawing.RectangleF rec = ButtonBounds;
                 if (rec.Contains(e.CanvasLocation))
                 {
-                    MessageBox.Show("Generating csv data!", "Generate!", MessageBoxButtons.OK);
-                    datgen.RunSolver();
-                    //this.batchSimulation();
-                    //Console.WriteLine(" number of plugged in sliders is ", this.pluggedSliders.Count);
+                    //int num  = numSld;
 
+                    int numsliders = own.Params.Input[0].SourceCount;
+                    DialogResult result = MessageBox.Show("You have "+numsliders+" input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
+                    if (result == DialogResult.Yes)
+                    {
+                        datgen.RunSolver();
+                    }
+                    else if (result == DialogResult.No)
+                    {
+                       // do nothing
+                    }
 
                     return GH_ObjectResponse.Handled;
                 }
             }
             return base.RespondToMouseDown(sender, e);
         }
-
-        public void batchSimulation()
-        {
-            // write code to automate sliders and run simulations
-            // 
-
-            //GH_Slider slider = this.Params.Input[0].Attributes.GetTopLevel.DocObject;
-            
-            //for (int i=0; i<this.pluggedSliders.Count; i++)
-            for (int i = 0; i <1; i++)
-                {
-
-
-                //GH_NumberSlider ghSlider = 
-                //ghSlider.SetSliderValue(0);
-                try
-
-                {
-                    this.pluggedSliders[i].Slider.Value = (decimal)0;
-                }
-
-                catch (Exception e)
-                {
-                    Console.WriteLine("This is empty", e);
-                }
-                //if (this.pluggedSliders[i] != null)
-                //{
-                // this.pluggedSliders[i].SetSliderValue((decimal)0);
-                //    this.pluggedSliders[i].Value= (decimal)0;
-                //}
-
-            }
-
-
-
-            //compInput_simOutputs = ghenv.Component.Params.Input[2]
-        }
-
-
-
-        //compInput_simOutputs = ghenv.Component.Params.Input[2]
     
     }
 

@@ -34,7 +34,7 @@ namespace Lab_Mouse.Components
               "Lab Mouse", "Modeling"))
         {
             // default starting distribution
-            this.probabilities = new List<double> { 0.0 };
+            this.probabilities = new List<double> { 0.0, 0.1, 0.7, 0.9 };
             this.draw_flag = "h";
         }
 
@@ -182,7 +182,7 @@ namespace Lab_Mouse.Components
     // POutput component attributes
     public class POutputAttributes : GH_ResizableAttributes<POutput>
     {
-        private List<double> probabilities;
+        //private List<double> probabilities;
         POutput own;
 
         public POutputAttributes(POutput owner) : base(owner)
