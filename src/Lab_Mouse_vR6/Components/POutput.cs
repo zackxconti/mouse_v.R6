@@ -13,6 +13,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
+using Lab_Mouse.Properties;
 using Lab_Mouse.Components;
 
 namespace Lab_Mouse.Components
@@ -162,6 +163,11 @@ namespace Lab_Mouse.Components
             }
 
             this.probabilities = tempPDList;
+            for (int i = 0; i < this.probabilities.Count; i++)
+            {
+                Rhino.RhinoApp.WriteLine(this.probabilities[i].ToString());
+            }
+
             ExpireSolution(true);
         }
 
@@ -525,6 +531,8 @@ namespace Lab_Mouse.Components
             List<double> probs = own.probabilities;
 
             PointF[] pts = getHistoPts(own.probabilities);
+
+            Rhino.RhinoApp.WriteLine(pts.Length.ToString());
 
             if (own.draw_flag == "s")
             {

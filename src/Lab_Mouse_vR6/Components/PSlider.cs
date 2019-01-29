@@ -13,6 +13,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
+using Lab_Mouse.Properties;
 using Lab_Mouse.Components;
 
 
@@ -162,7 +163,9 @@ namespace Lab_Mouse.Components
             get
             {
                 // You can add image files to your project resources and access them like this:
-                return null;
+                return Lab_Mouse.Properties.Resources.PSlider_icon;
+
+                //return null;
             }
         }
 
