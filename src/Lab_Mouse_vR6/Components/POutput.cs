@@ -30,7 +30,7 @@ namespace Lab_Mouse.Components
         public POutput()
           : base(new GH_InstanceDescription("PDF Output", "POutput",
               "bla bla",
-              "Lab Mouse", "Modeling"))
+              "Lab Mouse", "Special Params"))
         {
             // default starting distribution
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 };

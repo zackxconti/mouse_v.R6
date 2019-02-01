@@ -12,12 +12,15 @@ using System.Threading.Tasks;
         public List<string> paraNames;
         public List<string> outNames;
         public List<List<double>> values;
+        public string filedir;
 
-        public CSVtype(List<string> paramNames, List <string> outputNames, List<List<double>> vals) 
+        public CSVtype(List<string> paramNames, List <string> outputNames, List<List<double>> vals, String filedirectory) 
         {
             paraNames = paramNames;
             outNames = outputNames;
-            values = vals;              
+            values = vals;
+            filedir = filedirectory;
+        
         }
         
     

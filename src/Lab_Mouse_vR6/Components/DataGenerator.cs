@@ -54,8 +54,8 @@ namespace Lab_Mouse.Components
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddNumberParameter("Inputs", "inputs", "Plug input sliders", GH_ParamAccess.tree);
-            pManager.AddNumberParameter("Outputs", "outputs", "Plug output numeric values", GH_ParamAccess.tree);
+            pManager.AddNumberParameter("Inputs", "PSliders", "Plug input sliders", GH_ParamAccess.tree);
+            pManager.AddNumberParameter("Outputs", "POutputs", "Plug output numeric values", GH_ParamAccess.tree);
             pManager.AddTextParameter("Directory", "dir", "Specify file directory", GH_ParamAccess.item);
 
         }
@@ -192,6 +192,8 @@ namespace Lab_Mouse.Components
 
             return data;
         }
+
+        
         
 
         public List<List<double>> runPythonScript(string scriptpath, List<System.Object> Arguments)
@@ -206,7 +208,7 @@ namespace Lab_Mouse.Components
             info.RedirectStandardOutput = true;
             info.RedirectStandardError = true;
             info.Arguments = "\"" + scriptpath + "\"";
-            List<string> outputs = new List<string>();
+            List<string> outputs = new List<string>(); // stores all outputs from python script
             foreach (var argument in Arguments)
             {
                 info.Arguments += " \"" + argument.ToString() + "\""; 
@@ -280,7 +282,7 @@ namespace Lab_Mouse.Components
                 GH_NumberSlider slider = source as GH_NumberSlider;
                 if (slider == null)
                 {
-                    Rhino.RhinoApp.Write("One of the variable inputs is not a slider.");
+                    Rhino.RhinoApp.Write("One of the inputs is not a slider.");
                     return;
                 }
                 sliders.Add(slider);
@@ -394,6 +396,7 @@ namespace Lab_Mouse.Components
                         sliders[j].SetSliderValue((decimal)Samples[i][j]); // does not work 
                     }
 
+
                     doc.NewSolution(false);
 
                     List<double> csvrow = new List<double>();
@@ -431,7 +434,7 @@ namespace Lab_Mouse.Components
                     Rhino.RhinoApp.WriteLine("({0}) = {1:0.00000}", string.Join(", ", sliderValuesTxt), measure);                    
                 }
                 // Update CSVtype with generated csvdata
-                this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd);
+                this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd, directory); 
                 
                 // Write csv data to text file in user-specified directory
                 this.csvdata.writeCSV(directory);
@@ -493,16 +496,25 @@ namespace Lab_Mouse.Components
                 {
                     //int num  = numSld;
 
+                    
                     int numsliders = own.Params.Input[0].SourceCount;
-                    DialogResult result = MessageBox.Show("You have "+numsliders+" input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
-                    if (result == DialogResult.Yes)
-                    {
-                        datgen.RunSolver();
+                    if (numsliders != 0) { 
+                        DialogResult result = MessageBox.Show("You have "+numsliders+" input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            datgen.RunSolver();
+                        }
+                        else if (result == DialogResult.No)
+                        {
+                            // do nothing
+                        }
                     }
-                    else if (result == DialogResult.No)
+                    else
                     {
-                       // do nothing
+                        DialogResult result = MessageBox.Show("No sliders are connected!", "Slider Automator");
                     }
+
 
                     return GH_ObjectResponse.Handled;
                 }

@@ -48,7 +48,7 @@ namespace Lab_Mouse.Components
             base.NickName = "PSlider";
             base.Description = "bla bla ";
             base.Category = "Lab Mouse";
-            base.SubCategory = "Modeling";
+            base.SubCategory = "Special Params";
 
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }; // default starting distribution
 
