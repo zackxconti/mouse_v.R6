@@ -13,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
-using Lab_Mouse_vR6.Properties;
 using Lab_Mouse.Components;
 
 
@@ -48,7 +47,7 @@ namespace Lab_Mouse.Components
             base.NickName = "PSlider";
             base.Description = "bla bla ";
             base.Category = "Lab Mouse";
-            base.SubCategory = "Special Params";
+            base.SubCategory = "Modeling";
 
             this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }; // default starting distribution
 
@@ -83,11 +82,11 @@ namespace Lab_Mouse.Components
             // additional dropdown menu for custom PD
             ToolStripMenuItem PDDropdown = GH_DocumentObject.Menu_AppendItem(menu, "Custom PD");
 
-            string displayText  = "";
-            for (int i =0; i < this.probabilities.Count; i++)
+            string displayText = "";
+            for (int i = 0; i < this.probabilities.Count; i++)
             {
                 displayText += this.probabilities[i].ToString();
-                if (i != this.probabilities.Count-1)
+                if (i != this.probabilities.Count - 1)
                 {
                     displayText += " , ";
                 }
@@ -114,7 +113,7 @@ namespace Lab_Mouse.Components
             string[] values = this.tempPD.Split(',');
             List<double> tempPDList = new List<double>();
 
-            for (int i=0; i<values.Length; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 tempPDList.Add(Double.Parse(values[i], CultureInfo.InvariantCulture));
             }
@@ -163,8 +162,6 @@ namespace Lab_Mouse.Components
             get
             {
                 // You can add image files to your project resources and access them like this:
-                //return Lab_Mouse_vR6.Properties.Resources.PSlider_icon;
-
                 return null;
             }
         }
@@ -192,7 +189,7 @@ namespace Lab_Mouse.Components
     public class PSliderAttributes : Grasshopper.Kernel.Special.GH_NumberSliderAttributes
     {
 
-        //private List<double> probabilities;
+        private List<double> probabilities;
         PSlider own;
         // private float minimum;
 
@@ -239,7 +236,7 @@ namespace Lab_Mouse.Components
         private PointF[] getPts(List<double> Probabilities)
 
         {
-            int n = own.probabilities.Count + 4;
+            int n = probabilities.Count + 4;
             PointF[] points = new PointF[n];
 
             int width_nickname = GH_FontServer.StringWidth(Owner.NickName, GH_FontServer.Standard);
@@ -249,7 +246,7 @@ namespace Lab_Mouse.Components
             points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 11, this.Pivot.Y - 7);
 
 
-            if (own.probabilities.Count != 0)
+            if (probabilities.Count != 0)
             {
                 // routine to get drawing coordinates based on bin  probabilities
                 for (int i = 0; i < Probabilities.Count; i++)
@@ -343,15 +340,15 @@ namespace Lab_Mouse.Components
         {
             System.Drawing.RectangleF[] rec = backgroundBinBounds;
 
-            for (int i = 0; i <rec.Length; i++)
+            for (int i = 0; i < rec.Length; i++)
             {
                 if (rec[i].Contains(e.CanvasLocation))
                 {
                     int pos = rec.Length - i - 1;
 
-                    for (int j =0; j < own.probabilities.Count; j ++)
+                    for (int j = 0; j < own.probabilities.Count; j++)
                     {
-                        if (j != pos )
+                        if (j != pos)
                         {
                             own.probabilities[j] = 0;
                         }
@@ -369,7 +366,7 @@ namespace Lab_Mouse.Components
                     return GH_ObjectResponse.Handled;
                 }
             }
-            
+
             return base.RespondToMouseDoubleClick(sender, e);
         }
 
@@ -395,7 +392,7 @@ namespace Lab_Mouse.Components
 
         // Rui
         // list of background bin Bounds
-        private System.Drawing.RectangleF[] backgroundBinBounds { get; set;}
+        private System.Drawing.RectangleF[] backgroundBinBounds { get; set; }
 
         // this function takes care of the drawing routines 
         protected override void Render(Grasshopper.GUI.Canvas.GH_Canvas canvas, Graphics graphics,

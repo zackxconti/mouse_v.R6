@@ -132,17 +132,17 @@ namespace Lab_Mouse.Components
             foreach (PSlider slider in PSliders)
             {
                 string name = slider.NickName;
-                List<double> pd = allPDs[name]; 
+                //List<double> pd = allPDs[name]; 
                 //slider.updatePDF()
             }
              
         }
 
 
-        public List<double> updatePSliderPDF (Dictionary<string,string> model, List<PSlider> sliders)
-        {
-            return sliders;
-        }
+        //public List<double> updatePSliderPDF (Dictionary<string,string> model, List<PSlider> sliders)
+        //{
+        //    //return sliders;
+        //}
 
 
         public List<string> runPythonScript(string scriptpath, List<System.Object> Arguments)
