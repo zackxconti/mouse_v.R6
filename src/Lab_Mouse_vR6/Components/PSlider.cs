@@ -40,6 +40,7 @@ namespace Lab_Mouse.Components
         public float min;
         public string draw_flag;
         public bool evidence = false;
+        public List<List<double>> binRange = new List<List<double>>();
 
         public PSlider()
           : base()
@@ -56,6 +57,15 @@ namespace Lab_Mouse.Components
             min = (float)(this.Slider.Minimum);
 
             this.draw_flag = "h";
+
+            this.binRange.Add(new List<double> { 0, 1 });
+            this.binRange.Add(new List<double> { 1, 2 });
+            this.binRange.Add(new List<double> { 2, 3 });
+            this.binRange.Add(new List<double> { 3, 4 });
+            this.binRange.Add(new List<double> { 4, 5 });
+            this.binRange.Add(new List<double> { 5, 6 });
+            this.binRange.Add(new List<double> { 6, 7 });
+            this.binRange.Add(new List<double> { 7, 8 });
         }
 
 

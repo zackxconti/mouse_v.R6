@@ -22,13 +22,16 @@ namespace Lab_Mouse.Components
         /// Initializes a new instance of the MyComponent1 class.
         public List<double> probabilities;
         // default starting string, need to be the same as the default starting probability distribution
-        public string tempPD = "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,";
+        public string tempPD = "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0";
         public float max;
         public float min;
         public List<GH_Number> userInput;
         public string sourceName;
         public string draw_flag;
         public bool evidence = false;
+        public bool doubleClicked = false;
+        public List<List<double>> binRange = new List<List<double>>();
+        
 
         public POutput()
           : base(new GH_InstanceDescription("PDF Output", "POutput",
@@ -38,6 +41,14 @@ namespace Lab_Mouse.Components
             // default starting distribution
             this.probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
             this.draw_flag = "h";
+            this.binRange.Add(new List<double> { 0, 1 });
+            this.binRange.Add(new List<double> { 1, 2 });
+            this.binRange.Add(new List<double> { 2, 3 });
+            this.binRange.Add(new List<double> { 3, 4 });
+            this.binRange.Add(new List<double> { 4, 5 });
+            this.binRange.Add(new List<double> { 5, 6 });
+            this.binRange.Add(new List<double> { 6, 7 });
+            this.binRange.Add(new List<double> { 7, 8 });
         }
 
         // get user input and construct default probability list 
@@ -151,6 +162,9 @@ namespace Lab_Mouse.Components
         // parse input PD and update probability
         private void OK_Click(object sender, EventArgs e)
         {
+            this.evidence = true;
+            this.doubleClicked = false;
+
             string[] values = this.tempPD.Split(',');
             List<double> tempPDList = new List<double>();
 
@@ -160,7 +174,6 @@ namespace Lab_Mouse.Components
             }
 
             this.probabilities = tempPDList;
-            this.evidence = true;
 
             ExpireSolution(true);
         }
@@ -416,6 +429,9 @@ namespace Lab_Mouse.Components
         {
             System.Drawing.RectangleF[] rec = backgroundBinBounds;
 
+            own.evidence = true;
+            own.doubleClicked = true;
+
             for (int i = 0; i < rec.Length; i++)
             {
                 if (rec[i].Contains(e.CanvasLocation))
@@ -444,8 +460,8 @@ namespace Lab_Mouse.Components
                 }
             }
 
-            own.evidence = true;
             Owner.OnDisplayExpired(true);
+
             return base.RespondToMouseDoubleClick(sender, e);
         }
 
@@ -477,10 +493,8 @@ namespace Lab_Mouse.Components
 
             RenderIncomingWires(canvas.Painter, Owner.Sources, Owner.WireDisplay);
 
+            // Define the default palette.
             GH_Palette palette = GH_Palette.Normal;
-
-            //base.Render(canvas, graphics, channel);
-            //Bounds = new RectangleF(this.Pivot, new SizeF(Bounds.Width, 20));
 
             // Create a new Capsule 
             GH_Capsule capsule = GH_Capsule.CreateCapsule(new RectangleF(this.Pivot, new SizeF(Bounds.Width, 20)), palette);
@@ -500,17 +514,56 @@ namespace Lab_Mouse.Components
                 componentName = "Probabilities (" + own.sourceName + " )";
             }
 
+            if ((own.evidence == true) && (own.doubleClicked == true))
+            {
+                Rhino.RhinoApp.WriteLine("db");
+                componentName = componentName + " = 100%";
+            }
+            else if ((own.evidence == true) && (own.doubleClicked == false))
+            {
+                Rhino.RhinoApp.WriteLine("not db");
+                componentName = componentName + " = custom";
+            }
+
+            Grasshopper.GUI.Canvas.GH_PaletteStyle styleStandard = null;
+            Grasshopper.GUI.Canvas.GH_PaletteStyle styleSelected = null;
+            GH_Skin.LoadSkin();
+
+            if (channel == GH_CanvasChannel.Objects)
+            {
+                // Cache the current styles.
+                styleStandard = GH_Skin.palette_normal_standard;
+                styleSelected = GH_Skin.palette_normal_selected;
+
+
+                if (!own.evidence)
+                {
+                    GH_Skin.palette_normal_selected = GH_Skin.palette_normal_standard;
+                }
+                else
+                {
+                    GH_Skin.palette_normal_standard = new GH_PaletteStyle(Color.SkyBlue, Color.DarkBlue, Color.Black);
+                    GH_Skin.palette_normal_selected = new GH_PaletteStyle(Color.SkyBlue, Color.DarkBlue, Color.Black);
+                }
+            }
 
             GH_Capsule message = GH_Capsule.CreateTextCapsule(
                 new RectangleF(new PointF(this.Pivot.X, this.Pivot.Y + 20), new SizeF(Bounds.Width, 20)),
                 new RectangleF(new PointF(this.Pivot.X, this.Pivot.Y + 20), new SizeF(Bounds.Width, 20)),
-                GH_Palette.Hidden,
+                GH_Palette.Normal,
                 componentName
                 );
 
             message.Render(graphics, Selected, Owner.Locked, false);
             message.Dispose();
             message = null;
+
+            if (channel == GH_CanvasChannel.Objects)
+            {
+                // Restore the cached styles.
+                GH_Skin.palette_normal_standard = styleStandard;
+                GH_Skin.palette_normal_selected = styleSelected;
+            }
 
             //Render the capsule using the current Selection, Locked and Hidden states.
             //Integer parameters are always hidden since they cannot be drawn in the viewport.
@@ -578,7 +631,7 @@ namespace Lab_Mouse.Components
 
             for (int i = 0; i < textCapsules.Length; i++)
             {
-                textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Hidden, "<=" + "40.13", 3, 3);
+                textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + "40.13", 3, 0);
                 textCapsules[i].Render(graphics, Selected, Owner.Locked, false);
             }
         }
