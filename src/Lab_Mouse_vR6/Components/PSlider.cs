@@ -39,8 +39,9 @@ namespace Lab_Mouse.Components
         public float max;
         public float min;
         public string draw_flag;
-        public PSlider()
+        public bool evidence = false;
 
+        public PSlider()
           : base()
         {
             base.Name = "PDF Slider";
@@ -119,6 +120,7 @@ namespace Lab_Mouse.Components
             }
 
             this.probabilities = tempPDList;
+            this.evidence = true;
 
             ExpireSolution(true);
         }
@@ -367,6 +369,7 @@ namespace Lab_Mouse.Components
                 }
             }
 
+            own.evidence = true;
             return base.RespondToMouseDoubleClick(sender, e);
         }
 

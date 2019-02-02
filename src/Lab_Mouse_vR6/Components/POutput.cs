@@ -28,6 +28,7 @@ namespace Lab_Mouse.Components
         public List<GH_Number> userInput;
         public string sourceName;
         public string draw_flag;
+        public bool evidence = false;
 
         public POutput()
           : base(new GH_InstanceDescription("PDF Output", "POutput",
@@ -159,6 +160,8 @@ namespace Lab_Mouse.Components
             }
 
             this.probabilities = tempPDList;
+            this.evidence = true;
+
             ExpireSolution(true);
         }
 
@@ -441,6 +444,7 @@ namespace Lab_Mouse.Components
                 }
             }
 
+            own.evidence = true;
             Owner.OnDisplayExpired(true);
             return base.RespondToMouseDoubleClick(sender, e);
         }
