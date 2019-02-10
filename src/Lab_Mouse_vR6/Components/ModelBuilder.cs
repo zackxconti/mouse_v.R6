@@ -11,8 +11,10 @@ using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Drawing.Printing;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace Lab_Mouse.Components
 {
@@ -82,12 +84,34 @@ namespace Lab_Mouse.Components
 
             // Gain access to datgen component that is connected to this component
             IGH_Param source = Params.Input[0].Sources[0];
-            DataGenerator datagencomponent = source as DataGenerator;
+            //DataGenerator datagencomponent = source as DataGenerator;
+
+            // Get GUID of the connected datagen component
+            Guid guid = source.Attributes.GetTopLevel.DocObject.InstanceGuid;
+            IGH_Component datagencomponent = doc.FindComponent(guid);
 
             // Gain access to inputs of datagen component
-            List<PSlider> PSliders = datagencomponent.Params.Input[0].Sources as List<PSlider>;
-            List<POutput> POutputs = datagencomponent.Params.Input[1].Sources as List<POutput>;
+
+            //List<PSlider> PSliders = datagencomponent.Params.Input[0].Sources as List<PSlider>;
+            List <PSlider> PSliders = new List<PSlider>();
+            
+            //List<POutput> POutputs = datagencomponent.Params.Input[1].Sources as List<POutput>;
+            List<POutput> POutputs = new List<POutput>();
             //List<Param_Number> outputs = datagencomponent.Params.Input[1].Sources as List<Param_Number>;
+
+            List<IGH_Param> datagen_input_sources = datagencomponent.Params.Input[0].Sources as List<IGH_Param>;
+            List<IGH_Param> datagen_output_sources = datagencomponent.Params.Input[1].Sources as List<IGH_Param>;
+
+            foreach (IGH_Param s in datagen_input_sources)
+            {
+                PSliders.Add(s as PSlider);  
+            }
+
+            foreach (IGH_Param o in datagen_output_sources)
+            {
+                POutputs.Add(o as POutput);
+            }
+
 
             // NOTE: The only way to access data in a GH_Panel is to get it from VolatileData.AllData(true) which can only 
             // be accessed using foreach loop, even though we only want one string. Hence the following code:
@@ -97,15 +121,20 @@ namespace Lab_Mouse.Components
                 directory.Add(dat.Value);
             }
 
-            string IPCbuildPath = Path.Combine(directory[0], "IPC_Modelbuilder_build.py");
-            string csvfilepath = Path.Combine(directory[0], "SimulationData.txt");
+            //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py");
+            //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py"); 
+            //string csvfilepath = Path.Combine(directory[0], "SimulationData.txt");
+
+            string IPCbuildPath = @"C:\Users\tij\Desktop\Zack\LabMouse_Dev\buildButton_IPC.py";
+            string csvfilepath = @"C:\Users\tij\Desktop\Zack\LabMouse_Dev\SimulationData.txt";
+
 
             // Add csvfilepath to list of Arguments
             Arguments.Add(csvfilepath);
 
             // get target names from POutput compnent nicknames and store as targetnames
             //List<string> targetnames = new List<string>();
-            string[] targetnames = new string[POutputs.Count];
+            var targetnames = new string[POutputs.Count];
             
             int index = 0;
             foreach (POutput POutput in POutputs)
@@ -115,27 +144,50 @@ namespace Lab_Mouse.Components
                 index++;
             }
 
+            var targetnames_json = JsonConvert.SerializeObject(targetnames);
             // Add targetnames to list of Arguments
-            Arguments.Add(targetnames);
-
+            Arguments.Add(targetnames_json);
             
+
             // Now, that we have all the necessary information to build the Bayesian Network, we can run the python script
-            // runPythonScript will return 3 arguments: [0] this.E, this.V, this.Vdata [1] numbinsDict, [2] priors
+            // runPythonScript will return 3 arguments: [0] {this.E, this.V, this.Vdata} [1] numbinsDict, [2] priors
             List<string> arguments = runPythonScript(IPCbuildPath, Arguments); // will return 3 arguments
 
-            
-            this.model = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[0]); 
-            Dictionary <string, string> allPDs = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[1]);
-            // call funtion to update all PSlider and Poutput probabilities accordig to priors 
-            Dictionary<string, List<int>> zack = null;
 
-            foreach (PSlider slider in PSliders)
+            //this.model = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[0]); 
+            //Dictionary <string, string> allPDs = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[2]);
+
+
+            //Dictionary<string, double[]> allPDs = JsonConvert.DeserializeObject<Dictionary<string, double[]>>(arguments[0]); // attempt to convert json dict directly into a dict <name, probabilities>
+            Dictionary<string, double[]> allPDs = new Dictionary<string, double[]>();
+            allPDs.Add("Para A", new double [] { 0.1, 0.2, 0.3, 0.4, 0.5});
+            allPDs.Add("Para B", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
+            allPDs.Add("Simulation Output", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
+            allPDs.Add("Simulation Output 2", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
+            
+            
+       
+
+
+            // call funtion to update all PSlider and Poutput probabilities accordig to priors 
+            //Dictionary<string, List<double>> dicta = null;
+
+            // loop through the PSliders to update their PDs
+            foreach (PSlider slider in PSliders)    
             {
                 string name = slider.NickName;
-                //List<double> pd = allPDs[name]; 
-                //slider.updatePDF()
+                List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                slider.updatePDF(pd);
             }
-             
+
+            // loop through the Poutputs to update their PDs
+            foreach (POutput pout in POutputs)    
+            {
+                string name = pout.NickName;
+                List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                pout.updatePDF(pd);
+            }
+
         }
 
 
@@ -167,6 +219,9 @@ namespace Lab_Mouse.Components
                 // convert inputs into csv file and then IPC filepath as system input, then open in python as filepath and read inputs from csv
             }
 
+
+            //info.Arguments = string.Format("")
+
             Console.Write("Send: {0}", info.Arguments);
 
             System.Diagnostics.Process python = new System.Diagnostics.Process();
@@ -180,21 +235,28 @@ namespace Lab_Mouse.Components
                 // using (StreamReader output = python.StandardOutput)
                 using (var output = python.StandardOutput)
                 {
-                    Console.Write("Standard Output");
+                    //Console.Write("Standard Output");
+                    Debug.WriteLine("Standard Output");
                     //Print(output.ReadToEnd());
                     //int o = int.Parse(output.ReadToEnd());
                     //string o = output.ReadToEnd();
                     string o = output.ReadLine();
                     outputs.Add(o);
+                    Debug.WriteLine("The value of the output is "+o.ToString());
                 }
             }
-            catch { }
+            catch {
+
+                Debug.WriteLine("issues");
+            }
 
             try
             {
                 using (var output = python.StandardError)
                 {
                     Console.Write("Standard Error");
+                    Debug.WriteLine("Standard Error");
+
                     Console.Write(output.ReadToEnd());
                 }
             }
@@ -205,9 +267,7 @@ namespace Lab_Mouse.Components
             return outputs; // will return a list of arguments as strings 
         }
         
-        
-
-
+ 
         /// <summary>
         /// Provides an Icon for the component.
         /// </summary>
@@ -311,35 +371,25 @@ namespace Lab_Mouse.Components
                 button3.Dispose();
             }
         }
-        /*
+        
         public override GH_ObjectResponse RespondToMouseDown(GH_Canvas sender, GH_CanvasMouseEvent e)
         {
             if (e.Button == System.Windows.Forms.MouseButtons.Left)
             {
-                DataGenerator datgen = Owner as DataGenerator;
+                ModelBuilder modelbld = Owner as ModelBuilder;
 
-                System.Drawing.RectangleF rec = ButtonBounds;
-                if (rec.Contains(e.CanvasLocation))
+                System.Drawing.RectangleF rec1 = Button1Bounds;
+                if (rec1.Contains(e.CanvasLocation))
                 {
-                    //int num  = numSld;
-
-                    int numsliders = own.Params.Input[0].SourceCount;
-                    DialogResult result = MessageBox.Show("You have " + numsliders + " input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
-                    if (result == DialogResult.Yes)
-                    {
-                        datgen.RunSolver();
-                    }
-                    else if (result == DialogResult.No)
-                    {
-                        // do nothing
-                    }
+      
+                    modelbld.RunSolver_BuildBN();
 
                     return GH_ObjectResponse.Handled;
                 }
             }
             return base.RespondToMouseDown(sender, e);
         }
-        */
+        
 
     }
 }

@@ -68,6 +68,7 @@ namespace Lab_Mouse.Components
             else
             {
                 this.sourceName = this.Sources[0].NickName.ToString();
+                this.NickName = this.sourceName;
 
             }
             return true;
@@ -629,9 +630,12 @@ namespace Lab_Mouse.Components
             RectangleF[] textholderBounds = getTextholder(own.probabilities);
             GH_Capsule[] textCapsules = new GH_Capsule[textholderBounds.Length];
 
-            for (int i = 0; i < textCapsules.Length; i++)
+            int numbins = textCapsules.Length;
+
+            for (int i = 0; i < numbins; i++)
             {
-                textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + "40.13", 3, 0);
+                //textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + own.binRange[numbins-1-i][1], 3, 0);
+                textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, own.binRange[numbins - 1 - i][0]+ "<=" + own.binRange[numbins - 1 - i][1], 3, 0);
                 textCapsules[i].Render(graphics, Selected, Owner.Locked, false);
             }
         }
