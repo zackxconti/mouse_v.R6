@@ -14,7 +14,12 @@ using System.Text;
 using System.Linq;
 using System.Drawing.Printing;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Diagnostics;
+using System.Xaml;
+using System.Web.Script.Serialization;
+
+
 
 namespace Lab_Mouse.Components
 {
@@ -28,8 +33,10 @@ namespace Lab_Mouse.Components
         /// Initializes a new instance of the ModelBuilder class.
         /// </summary>
         /// 
+        
 
-        Dictionary<string, string> model;
+        //Dictionary<string, string> model;
+        JObject model;
         Dictionary<string, string> numBinsDict;
         Dictionary<string, string> allPDs;
 
@@ -67,6 +74,13 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+        }
+
+        public static Dictionary<string, TValue> ToDictionary<TValue>(object obj)
+        {
+            var json = JsonConvert.SerializeObject(obj);
+            var dictionary = JsonConvert.DeserializeObject<Dictionary<string, TValue>>(json);
+            return dictionary;
         }
 
         public void RunSolver_BuildBN() // TODO: one 'runsolver()' function needed for each button 
@@ -122,11 +136,12 @@ namespace Lab_Mouse.Components
             }
 
             //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py");
-            //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py"); 
+            string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py"); 
             //string csvfilepath = Path.Combine(directory[0], "SimulationData.txt");
 
-            string IPCbuildPath = @"C:\Users\tij\Desktop\Zack\LabMouse_Dev\buildButton_IPC.py";
-            string csvfilepath = @"C:\Users\tij\Desktop\Zack\LabMouse_Dev\SimulationData.txt";
+            //string IPCbuildPath = "C:\\Users\\tij\\Desktop\\Zack\\LabMouse_Dev\\buildButton_IPC_mocktest.py";
+            //string csvfilepath = "C:\\Users\\tij\\Desktop\\Zack\\LabMouse_Dev\\SimulationData.txt";
+            string csvfilepath = "C:/Users/tij/Desktop/Zack/LabMouse_Dev/SimulationData.txt";
 
 
             // Add csvfilepath to list of Arguments
@@ -134,7 +149,7 @@ namespace Lab_Mouse.Components
 
             // get target names from POutput compnent nicknames and store as targetnames
             //List<string> targetnames = new List<string>();
-            var targetnames = new string[POutputs.Count];
+            string [] targetnames = new string[POutputs.Count];
             
             int index = 0;
             foreach (POutput POutput in POutputs)
@@ -144,29 +159,50 @@ namespace Lab_Mouse.Components
                 index++;
             }
 
-            var targetnames_json = JsonConvert.SerializeObject(targetnames);
+            // convert to json format
+            //string[][] names_formatted = targetnames.Select(x => new string[] { x }).ToArray();
+            //string targetnames_json = JsonConvert.SerializeObject(names_formatted);
+
             // Add targetnames to list of Arguments
-            Arguments.Add(targetnames_json);
-            
+            //Arguments.Add(targetnames_json);
+            Arguments.Add(string.Join(",",targetnames));
+
 
             // Now, that we have all the necessary information to build the Bayesian Network, we can run the python script
             // runPythonScript will return 3 arguments: [0] {this.E, this.V, this.Vdata} [1] numbinsDict, [2] priors
-            List<string> arguments = runPythonScript(IPCbuildPath, Arguments); // will return 3 arguments
+            string jsonArguments = runPythonScript(IPCbuildPath, Arguments)[0]; // will return 3 arguments
 
+            var json = JObject.Parse(jsonArguments);
+            Dictionary<string, List<double>> allPDs = json["priors"].ToObject<Dictionary<string, List<double>>>();
+            //this.model = json["model"] ;
 
             //this.model = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[0]); 
-            //Dictionary <string, string> allPDs = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[2]);
+
+            //Dictionary<string, RootObject> outputs = JsonConvert.DeserializeObject<Dictionary<string, RootObject>>(arguments);
+            //var outputs = JsonConvert.DeserializeObject<Dictionary<string,RootObject>>(jsonArguments);
+
+            //Dictionary<string, List<double>> allPDs = outputs["priors"].priors.priors;
+
+            //List<double> t = allPDs["deflection"].Split(',').Select(double.Parse).ToList();
+
+            //RootObject allPDs = JsonConvert.DeserializeObject<RootObject>(outputs["priors"]);
+
+            // Dictionary<string, List<double>> allPDs = outputs["priors"].ToDictionary(k => k.Key, k => k.Value as List<double>);
+
+            //Dictionary<string, double[]> PDs = JsonConvert.DeserializeObject<Dictionary<string, double[]>>(allPDs);
 
 
-            //Dictionary<string, double[]> allPDs = JsonConvert.DeserializeObject<Dictionary<string, double[]>>(arguments[0]); // attempt to convert json dict directly into a dict <name, probabilities>
+            //List<string> r = targets.Split(',').ToList();
+
+            /*
             Dictionary<string, double[]> allPDs = new Dictionary<string, double[]>();
             allPDs.Add("Para A", new double [] { 0.1, 0.2, 0.3, 0.4, 0.5});
             allPDs.Add("Para B", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            allPDs.Add("Simulation Output", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            allPDs.Add("Simulation Output 2", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            
-            
-       
+            allPDs.Add("sim_out_A", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
+            allPDs.Add("sim_out_B", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
+            */
+
+
 
 
             // call funtion to update all PSlider and Poutput probabilities accordig to priors 
@@ -176,8 +212,10 @@ namespace Lab_Mouse.Components
             foreach (PSlider slider in PSliders)    
             {
                 string name = slider.NickName;
+
                 List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
                 slider.updatePDF(pd);
+                ExpireSolution(true);
             }
 
             // loop through the Poutputs to update their PDs
@@ -186,6 +224,7 @@ namespace Lab_Mouse.Components
                 string name = pout.NickName;
                 List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
                 pout.updatePDF(pd);
+                ExpireSolution(true);
             }
 
         }
@@ -203,7 +242,7 @@ namespace Lab_Mouse.Components
             System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo();
             info.FileName = @"C:\Python27\python.exe";
             info.UseShellExecute = false;
-            info.CreateNoWindow = true;
+            info.CreateNoWindow = false;
             info.RedirectStandardOutput = true;
             info.RedirectStandardError = true;
             info.Arguments = "\"" + scriptpath + "\"";
@@ -299,7 +338,6 @@ namespace Lab_Mouse.Components
 
 
 
-
     /// custom attribute class
     /// 
 
@@ -389,7 +427,32 @@ namespace Lab_Mouse.Components
             }
             return base.RespondToMouseDown(sender, e);
         }
-        
+
 
     }
+
+    public class Priors
+    {
+
+        public Dictionary<string, string> priors { get; set;}
+
+
+
+    }
+
+    public class Model
+    {
+
+        public string model { get; set; }
+
+    }
+
+    public class RootObject
+    {
+        public Priors priors { get; set; }
+       
+    }
+
+
 }
+ 
