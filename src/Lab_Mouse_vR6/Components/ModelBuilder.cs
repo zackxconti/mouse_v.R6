@@ -36,10 +36,19 @@ namespace Lab_Mouse.Components
         
 
         //Dictionary<string, string> model;
-        JObject model;
-        Dictionary<string, string> numBinsDict;
-        Dictionary<string, string> allPDs;
+        
+        
+
         public Dictionary<string, List<double>> priors;
+        public Dictionary<string, List<List<double>>> BinRanges;
+        public string model;
+        List<PSlider> PSliders;
+        List<POutput> POutputs;
+        List<string> targets;
+        public List<string> directory;
+        IGH_Component datagencomponent;
+
+
 
         public ModelBuilder()
           : base("ModelBuilder", "BN Model",
@@ -48,9 +57,15 @@ namespace Lab_Mouse.Components
         {
 
             this.model = null;
-            this.numBinsDict = null;
-            this.allPDs = null;
             this.priors = null;
+            this.BinRanges = null;
+            this.PSliders = null;
+            this.POutputs = null;
+            this.targets = null;
+            this.directory = new List<string>();
+
+
+
 
         }
 
@@ -85,11 +100,78 @@ namespace Lab_Mouse.Components
             return dictionary;
         }
 
+        public void  getdatagenInputParams ()
+        {
+            // Get the document this component belongs to.
+            GH_Document doc = OnPingDocument();
+            if (doc == null) return;
+
+            //CSVtype csvinput = this.Params.Input[0].Sources[0] as CSVtype;
+
+            // Gain access to datgen component that is connected to this component
+            IGH_Param source = this.Params.Input[0].Sources[0];
+
+
+            // Get GUID of the connected datagen component
+            Guid guid = source.Attributes.GetTopLevel.DocObject.InstanceGuid;
+            this.datagencomponent = doc.FindComponent(guid);
+
+            foreach (GH_String dat in datagencomponent.Params.Input[2].Sources[0].VolatileData.AllData(true))
+            {
+                this.directory.Add(dat.Value);
+            }
+
+            //List<PSlider> PSliders = datagencomponent.Params.Input[0].Sources as List<PSlider>;
+            List<PSlider> PSliders = new List<PSlider>();
+
+            //List<POutput> POutputs = datagencomponent.Params.Input[1].Sources as List<POutput>;
+            List<POutput> POutputs = new List<POutput>();
+            //List<Param_Number> outputs = datagencomponent.Params.Input[1].Sources as List<Param_Number>;
+
+            List<IGH_Param> datagen_input_sources = this.datagencomponent.Params.Input[0].Sources as List<IGH_Param>;
+            List<IGH_Param> datagen_output_sources = this.datagencomponent.Params.Input[1].Sources as List<IGH_Param>;
+
+            foreach (IGH_Param s in datagen_input_sources)
+            {
+                PSliders.Add(s as PSlider);
+
+            }
+
+            foreach (IGH_Param o in datagen_output_sources)
+            {
+                POutputs.Add(o as POutput);
+
+            }
+
+            this.PSliders = new List<PSlider>(PSliders);
+            this.POutputs = new List<POutput>(POutputs);
+
+            // get target names from POutput compnent nicknames and store as targetnames
+            //List<string> targetnames = new List<string>();
+            string[] targetnames = new string[POutputs.Count];
+
+            int index = 0;
+            foreach (POutput POutput in this.POutputs)
+            {
+                string name = POutput.NickName as string;
+                targetnames[index] = name;
+                index++;
+            }
+
+            this.targets = new List<string>(targetnames);
+
+
+        }
+
+       
+
    
 
         public void RunSolver_BuildBN() // TODO: one 'runsolver()' function needed for each button 
 
         {
+            getdatagenInputParams();
+            /*
             // Get the document this component belongs to.
             GH_Document doc = OnPingDocument();
             if (doc == null) return;
@@ -98,70 +180,82 @@ namespace Lab_Mouse.Components
 
             ///// Prepare arguments to pass to Python process to build Bayesian Network metamode l
             // Instaniate empty list of arguments
-            List<System.Object> Arguments = new List<System.Object>();
-
+            //List<System.Object> Arguments = new List<System.Object>();
+            
             // Gain access to datgen component that is connected to this component
             IGH_Param source = Params.Input[0].Sources[0];
             //DataGenerator datagencomponent = source as DataGenerator;
-
+            
             // Get GUID of the connected datagen component
             Guid guid = source.Attributes.GetTopLevel.DocObject.InstanceGuid;
             IGH_Component datagencomponent = doc.FindComponent(guid);
-
+            
+            
             // Gain access to inputs of datagen component
 
             //List<PSlider> PSliders = datagencomponent.Params.Input[0].Sources as List<PSlider>;
-            List <PSlider> PSliders = new List<PSlider>();
+            List<PSlider> PSliders = new List<PSlider>();
             
             //List<POutput> POutputs = datagencomponent.Params.Input[1].Sources as List<POutput>;
             List<POutput> POutputs = new List<POutput>();
             //List<Param_Number> outputs = datagencomponent.Params.Input[1].Sources as List<Param_Number>;
 
-            List<IGH_Param> datagen_input_sources = datagencomponent.Params.Input[0].Sources as List<IGH_Param>;
-            List<IGH_Param> datagen_output_sources = datagencomponent.Params.Input[1].Sources as List<IGH_Param>;
+            List<IGH_Param> datagen_input_sources = this.datagencomponent.Params.Input[0].Sources as List<IGH_Param>;
+            List<IGH_Param> datagen_output_sources = this.datagencomponent.Params.Input[1].Sources as List<IGH_Param>;
 
             foreach (IGH_Param s in datagen_input_sources)
             {
                 PSliders.Add(s as PSlider);  
+               
             }
 
             foreach (IGH_Param o in datagen_output_sources)
             {
                 POutputs.Add(o as POutput);
+                
             }
 
-
+            this.PSliders = new List<PSlider>(PSliders);
+            this.POutputs = new List<POutput>(POutputs);
+      
+            
             // NOTE: The only way to access data in a GH_Panel is to get it from VolatileData.AllData(true) which can only 
             // be accessed using foreach loop, even though we only want one string. Hence the following code:
             List<string> directory = new List<string> ();
-            foreach (GH_String dat in datagencomponent.Params.Input[2].Sources[0].VolatileData.AllData(true))
+            foreach (GH_String dat in this.datagencomponent.Params.Input[2].Sources[0].VolatileData.AllData(true))
             {
                 directory.Add(dat.Value);
             }
+            */
 
             //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py");
-            string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py"); 
-            //string csvfilepath = Path.Combine(directory[0], "SimulationData.txt");
+            string IPCbuildPath = Path.Combine(this.directory[0], "buildButton_IPC.py"); 
+            string csvfilepath = Path.Combine(this.directory[0], "SimulationData.txt");
 
-            //string IPCbuildPath = "C:\\Users\\tij\\Desktop\\Zack\\LabMouse_Dev\\buildButton_IPC_mocktest.py";
-            //string csvfilepath = "C:\\Users\\tij\\Desktop\\Zack\\LabMouse_Dev\\SimulationData.txt";
-            string csvfilepath = "C:/Users/tij/Desktop/Zack/LabMouse_Dev/SimulationData.txt";
+            //string csvfilepath = "C:/Users/tij/Desktop/Zack/LabMouse_Dev/SimulationData.txt";
 
+            ///// Prepare arguments to pass to Python process to build Bayesian Network metamode l
+            // Instaniate empty list of arguments
+            List<System.Object> Arguments = new List<System.Object>();
 
             // Add csvfilepath to list of Arguments
             Arguments.Add(csvfilepath);
 
+            /*
             // get target names from POutput compnent nicknames and store as targetnames
             //List<string> targetnames = new List<string>();
             string [] targetnames = new string[POutputs.Count];
             
             int index = 0;
-            foreach (POutput POutput in POutputs)
+            foreach (POutput POutput in this.POutputs)
             {
                 string name = POutput.NickName as string;
                 targetnames[index] = name;
                 index++;
             }
+
+            this.targets = new List<string>(targetnames);
+            */
 
             // convert to json format
             //string[][] names_formatted = targetnames.Select(x => new string[] { x }).ToArray();
@@ -169,45 +263,33 @@ namespace Lab_Mouse.Components
 
             // Add targetnames to list of Arguments
             //Arguments.Add(targetnames_json);
-            Arguments.Add(string.Join(",",targetnames));
+            Arguments.Add(string.Join(",",this.targets));
 
 
             // Now, that we have all the necessary information to build the Bayesian Network, we can run the python script
             // runPythonScript will return 3 arguments: [0] {this.E, this.V, this.Vdata} [1] numbinsDict, [2] priors
             string jsonArguments = runPythonScript(IPCbuildPath, Arguments)[0]; // will return 3 arguments
 
+            // Parse arguments to deserialise json string 
             var json = JObject.Parse(jsonArguments);
+
+            // store json priors into a dict
             Dictionary<string, List<double>> priorpds = json["priors"].ToObject<Dictionary<string, List<double>>>();
 
-            this.priors = priorpds;
-
+            // store json bin ranges into a dict
             Dictionary<string, List<List<double>>> binranges = json["binranges"].ToObject<Dictionary<string, List<List<double>>>>();
-             
 
-            int f = 3;
-            //this.model = json["model"] ;
+            // store json model as string 
+            string jsonmodel = json["model"].ToString();
 
-            //this.model = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[0]); 
-
-            //Dictionary<string, RootObject> outputs = JsonConvert.DeserializeObject<Dictionary<string, RootObject>>(arguments);
-            //var outputs = JsonConvert.DeserializeObject<Dictionary<string,RootObject>>(jsonArguments);
-
-            //Dictionary<string, List<double>> allPDs = outputs["priors"].priors.priors;
-
-            //List<double> t = allPDs["deflection"].Split(',').Select(double.Parse).ToList();
-
-            //RootObject allPDs = JsonConvert.DeserializeObject<RootObject>(outputs["priors"]);
-
-            // Dictionary<string, List<double>> allPDs = outputs["priors"].ToDictionary(k => k.Key, k => k.Value as List<double>);
-
-            //Dictionary<string, double[]> PDs = JsonConvert.DeserializeObject<Dictionary<string, double[]>>(allPDs);
-
-
-            //List<string> r = targets.Split(',').ToList();
-
-
+            // update ModelBuilder properties
+            this.priors = priorpds;
+            this.BinRanges = binranges;
+            this.model = jsonmodel;
+            
+  
             // loop through the PSliders to update priors 
-            foreach (PSlider slider in PSliders)    
+            foreach (PSlider slider in this.PSliders)    
             {
                 string name = slider.NickName;
 
@@ -219,7 +301,7 @@ namespace Lab_Mouse.Components
             }
 
             // loop through the Poutputs to update their PDs and ranges
-            foreach (POutput pout in POutputs)    
+            foreach (POutput pout in this.POutputs)    
             {
                 string name = pout.NickName;
                 List<double> pd = this.priors[name].ToList(); // gets corresponding array of probabilities and converts to list 
@@ -238,8 +320,68 @@ namespace Lab_Mouse.Components
         {
 
 
+            //if no model is loaded, then prompt message
 
 
+            Dictionary<string, List<double>> evidence = new Dictionary<string, List<double>>();
+            string IPCupdatePath = Path.Combine(this.directory[0], "buildButton_IPC.py");
+            Dictionary<string, List<double>> allposteriors;
+
+
+
+            // search through Psliders to check their evidence flag status 
+            foreach (PSlider slider in this.PSliders)
+            {
+                if (slider.evidence == true)
+                {
+                    evidence[slider.NickName] = slider.probabilities;
+                }
+            }
+            // search through Poutputs to check their evidence flag status
+            foreach (POutput output in this.POutputs)
+            {
+                if (output.evidence == true)
+                {
+                    evidence[output.NickName] = output.Probabilities;
+                }
+            }
+
+            
+
+            if (this.model != null)
+            {
+               
+                List<System.Object> Arguments = new List<System.Object>();
+                // note: the order in which the following are added, is order sensitive 
+                Arguments.Add(this.model);
+                Arguments.Add(this.targets);
+                Arguments.Add(this.BinRanges);                
+                Arguments.Add(evidence);
+
+                //string jsonArguments = runPythonScript(IPCupdatePath, Arguments)[0];
+
+            }
+
+            // allposteriors = runpythonscript (this.model, this.targets, evidence)
+
+            //update Psliders
+
+            //update Poutputs
+        }
+
+        public void RunSolver_ResetBN()
+        {
+            foreach(PSlider slider in this.PSliders)
+            {
+                slider.updatePDF(new List<double>(this.priors[slider.NickName]));
+            }
+
+            foreach (POutput output in this.POutputs)
+            {
+                output.updatePDF(new List<double>(this.priors[output.NickName]));
+            }
+
+            this.ExpireSolution(true);
         }
 
 
@@ -432,11 +574,38 @@ namespace Lab_Mouse.Components
                     return GH_ObjectResponse.Handled;
                 }
 
-                System.Drawing.RectangleF rec2 = Button1Bounds;
+                System.Drawing.RectangleF rec2 = Button2Bounds;
                 if (rec2.Contains(e.CanvasLocation))
                 {
 
-                    modelbld.RunSolver_BuildBN();
+                    if (modelbld.model == null)
+                    {
+                        DialogResult result = MessageBox.Show("No model has been built. Please build model before updating.", "Warning");
+                    }
+
+                    else
+                    {
+                        modelbld.RunSolver_UpdateBN();
+                    }
+
+
+                    return GH_ObjectResponse.Handled;
+                }
+
+                System.Drawing.RectangleF rec3 = Button3Bounds;
+                if (rec3.Contains(e.CanvasLocation))
+                {
+
+                    if (modelbld.model == null)
+                    {
+                        DialogResult result = MessageBox.Show("Nothing to reset. Model has been built.", "Warning");
+                    }
+
+                    else
+                    {
+                        modelbld.RunSolver_ResetBN();
+                    }
+
 
                     return GH_ObjectResponse.Handled;
                 }
@@ -450,27 +619,7 @@ namespace Lab_Mouse.Components
 
     }
 
-    public class Priors
-    {
 
-        public Dictionary<string, string> priors { get; set;}
-
-
-
-    }
-
-    public class Model
-    {
-
-        public string model { get; set; }
-
-    }
-
-    public class RootObject
-    {
-        public Priors priors { get; set; }
-       
-    }
 
 
 }
