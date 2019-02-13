@@ -319,15 +319,9 @@ namespace Lab_Mouse.Components
         public void RunSolver_UpdateBN() // TODO: one 'runsolver()' function needed for each button 
         {
 
-
-            //if no model is loaded, then prompt message
-
-
             Dictionary<string, List<double>> evidence = new Dictionary<string, List<double>>();
             string IPCupdatePath = Path.Combine(this.directory[0], "buildButton_IPC.py");
             Dictionary<string, List<double>> allposteriors;
-
-
 
             // search through Psliders to check their evidence flag status 
             foreach (PSlider slider in this.PSliders)

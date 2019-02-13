@@ -43,6 +43,12 @@ namespace Lab_Mouse.Components
         public bool evidence = false;
         public List<List<double>> binRange = new List<List<double>>();
 
+        public List<double> Probabilities
+        {
+            get { return probabilities; }
+            set { probabilities = value; }
+        }
+
         public Guid MBguid;
 
         public PSlider()
@@ -55,7 +61,7 @@ namespace Lab_Mouse.Components
             base.SubCategory = "Parameters";
 
             
-            this.probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; // default starting distribution
+            this.Probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; // default starting distribution
             this.priors = new List<double>();
 
             this.MBguid = new Guid ();
@@ -85,7 +91,7 @@ namespace Lab_Mouse.Components
         public override void CreateAttributes()
         {
             {
-                this.m_attributes = (IGH_Attributes)new PSliderAttributes(this, this.probabilities);
+                this.m_attributes = (IGH_Attributes)new PSliderAttributes(this, this.Probabilities);
             }
         }
 
@@ -101,10 +107,10 @@ namespace Lab_Mouse.Components
             ToolStripMenuItem PDDropdown = GH_DocumentObject.Menu_AppendItem(menu, "Custom PD");
 
             string displayText = "";
-            for (int i = 0; i < this.probabilities.Count; i++)
+            for (int i = 0; i < this.Probabilities.Count; i++)
             {
-                displayText += this.probabilities[i].ToString();
-                if (i != this.probabilities.Count - 1)
+                displayText += this.Probabilities[i].ToString();
+                if (i != this.Probabilities.Count - 1)
                 {
                     displayText += " , ";
                 }
@@ -136,7 +142,7 @@ namespace Lab_Mouse.Components
                 tempPDList.Add(Double.Parse(values[i], CultureInfo.InvariantCulture));
             }
 
-            this.probabilities = tempPDList;
+            this.Probabilities = tempPDList;
             this.evidence = true;
 
             ExpireSolution(true);
@@ -169,7 +175,7 @@ namespace Lab_Mouse.Components
         // Call to update the PDF of this PSlider
         public void updatePDF(List<double> p)
         {
-            this.probabilities = p;
+            this.Probabilities = p;
         }
 
         /// <summary>

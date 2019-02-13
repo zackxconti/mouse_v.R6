@@ -20,7 +20,7 @@ namespace Lab_Mouse.Components
     public class POutput : GH_Param<GH_Number>
     {
         /// Initializes a new instance of the MyComponent1 class.
-        public List<double> Probabilities;
+        public List<double> probabilities;
         private List<double> priors = new List<double>(); // need to find ModelBuilder and take prior 
         private List<List<double>> binranges;
 
@@ -49,11 +49,11 @@ namespace Lab_Mouse.Components
             set { binranges = value; }
         }
 
-        //public List<double> Probabilities
-        //{
-        //    get { return probabilities; }
-        //    set { probabilities = value; }
-        //}
+        public List<double> Probabilities
+        {
+            get { return probabilities; }
+            set { probabilities = value; }
+        }
 
 
 
@@ -70,27 +70,6 @@ namespace Lab_Mouse.Components
 
             this.BinRanges = null;
 
-            //for (int i=0; i<this.Probabilities.Count; i++)
-            //{
-            //    this.binRange.Add(new List<double> { i, i+1 });
-            //}
-            //this.binRange.Add(new List<double> { 0, 1 });
-            //this.binRange.Add(new List<double> { 1, 2 });
-            //this.binRange.Add(new List<double> { 2, 3 });
-            //this.binRange.Add(new List<double> { 3, 4 });
-            //this.binRange.Add(new List<double> { 4, 5 });
-            //this.binRange.Add(new List<double> { 5, 6 });
-            //this.binRange.Add(new List<double> { 6, 7 });
-            //this.binRange.Add(new List<double> { 7, 8 });
-            
-            
-            
-
-
-        //GH_Document doc = OnPingDocument();
-        //IGH_Component MBuilder = doc.FindComponent(this.MBguid);
-        //ModelBuilder mbuilder = MBuilder as ModelBuilder;
-        //this.priors = mbuilder.priors[this.NickName];
     }
 
         // get user input and construct default probability list 
