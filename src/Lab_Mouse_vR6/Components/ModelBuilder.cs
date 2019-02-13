@@ -39,16 +39,18 @@ namespace Lab_Mouse.Components
         JObject model;
         Dictionary<string, string> numBinsDict;
         Dictionary<string, string> allPDs;
+        public Dictionary<string, List<double>> priors;
 
         public ModelBuilder()
           : base("ModelBuilder", "BN Model",
               "Description",
-              "Lab Mouse", "Modeling")
+              "Lab Mouse", "Model")
         {
 
             this.model = null;
             this.numBinsDict = null;
             this.allPDs = null;
+            this.priors = null;
 
         }
 
@@ -82,6 +84,8 @@ namespace Lab_Mouse.Components
             var dictionary = JsonConvert.DeserializeObject<Dictionary<string, TValue>>(json);
             return dictionary;
         }
+
+   
 
         public void RunSolver_BuildBN() // TODO: one 'runsolver()' function needed for each button 
 
@@ -173,7 +177,14 @@ namespace Lab_Mouse.Components
             string jsonArguments = runPythonScript(IPCbuildPath, Arguments)[0]; // will return 3 arguments
 
             var json = JObject.Parse(jsonArguments);
-            Dictionary<string, List<double>> allPDs = json["priors"].ToObject<Dictionary<string, List<double>>>();
+            Dictionary<string, List<double>> priorpds = json["priors"].ToObject<Dictionary<string, List<double>>>();
+
+            this.priors = priorpds;
+
+            Dictionary<string, List<List<double>>> binranges = json["binranges"].ToObject<Dictionary<string, List<List<double>>>>();
+             
+
+            int f = 3;
             //this.model = json["model"] ;
 
             //this.model = JsonConvert.DeserializeObject<Dictionary<string, string>>(arguments[0]); 
@@ -194,46 +205,42 @@ namespace Lab_Mouse.Components
 
             //List<string> r = targets.Split(',').ToList();
 
-            /*
-            Dictionary<string, double[]> allPDs = new Dictionary<string, double[]>();
-            allPDs.Add("Para A", new double [] { 0.1, 0.2, 0.3, 0.4, 0.5});
-            allPDs.Add("Para B", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            allPDs.Add("sim_out_A", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            allPDs.Add("sim_out_B", new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 });
-            */
 
-
-
-
-            // call funtion to update all PSlider and Poutput probabilities accordig to priors 
-            //Dictionary<string, List<double>> dicta = null;
-
-            // loop through the PSliders to update their PDs
+            // loop through the PSliders to update priors 
             foreach (PSlider slider in PSliders)    
             {
                 string name = slider.NickName;
 
-                List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
-                slider.updatePDF(pd);
+                List<double> pd = this.priors[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                slider.updatePDF(new List<double>(pd));
+                slider.priors = new List<double>(pd); // permanently store prior PD in PSlider component
+                
                 ExpireSolution(true);
             }
 
-            // loop through the Poutputs to update their PDs
+            // loop through the Poutputs to update their PDs and ranges
             foreach (POutput pout in POutputs)    
             {
                 string name = pout.NickName;
-                List<double> pd = allPDs[name].ToList(); // gets corresponding array of probabilities and converts to list 
-                pout.updatePDF(pd);
+                List<double> pd = this.priors[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                pout.updatePDF(new List<double>(pd));
+                pout.Priors = new List<double>(pd);
+
+                List<List<double>> ranges = binranges[name].ToList();
+                pout.BinRanges = new List<List<double>>(ranges);
+
                 ExpireSolution(true);
             }
 
         }
 
+        public void RunSolver_UpdateBN() // TODO: one 'runsolver()' function needed for each button 
+        {
 
-        //public List<double> updatePSliderPDF (Dictionary<string,string> model, List<PSlider> sliders)
-        //{
-        //    //return sliders;
-        //}
+
+
+
+        }
 
 
         public List<string> runPythonScript(string scriptpath, List<System.Object> Arguments)
@@ -424,6 +431,18 @@ namespace Lab_Mouse.Components
 
                     return GH_ObjectResponse.Handled;
                 }
+
+                System.Drawing.RectangleF rec2 = Button1Bounds;
+                if (rec2.Contains(e.CanvasLocation))
+                {
+
+                    modelbld.RunSolver_BuildBN();
+
+                    return GH_ObjectResponse.Handled;
+                }
+
+
+
             }
             return base.RespondToMouseDown(sender, e);
         }

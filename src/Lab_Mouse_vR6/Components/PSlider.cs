@@ -33,6 +33,7 @@ namespace Lab_Mouse.Components
         /// 
 
         public List<double> probabilities;
+        public List<double> priors;
         // Rui 
         // Temporary storage for PD
         public string tempPD = "0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1"; // default starting string, need to be the same as the default starting probability distribution
@@ -42,6 +43,8 @@ namespace Lab_Mouse.Components
         public bool evidence = false;
         public List<List<double>> binRange = new List<List<double>>();
 
+        public Guid MBguid;
+
         public PSlider()
           : base()
         {
@@ -49,9 +52,13 @@ namespace Lab_Mouse.Components
             base.NickName = "PSlider";
             base.Description = "bla bla ";
             base.Category = "Lab Mouse";
-            base.SubCategory = "Modeling";
+            base.SubCategory = "Parameters";
 
-            this.probabilities = new List<double> { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }; // default starting distribution
+            
+            this.probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; // default starting distribution
+            this.priors = new List<double>();
+
+            this.MBguid = new Guid ();
 
             max = (float)(this.Slider.Maximum);
             min = (float)(this.Slider.Minimum);
@@ -368,7 +375,9 @@ namespace Lab_Mouse.Components
 
                     if (own.probabilities[pos] == 1)
                     {
-                        own.probabilities[pos] = 0;
+                      
+                        own.probabilities = new List<double>(own.priors);
+                        own.ExpireSolution(true);
                     }
                     else
                     {

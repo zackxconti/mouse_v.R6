@@ -20,7 +20,10 @@ namespace Lab_Mouse.Components
     public class POutput : GH_Param<GH_Number>
     {
         /// Initializes a new instance of the MyComponent1 class.
-        public List<double> probabilities;
+        public List<double> Probabilities;
+        private List<double> priors = new List<double>(); // need to find ModelBuilder and take prior 
+        private List<List<double>> binranges;
+
         // default starting string, need to be the same as the default starting probability distribution
         public string tempPD = "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0";
         public float max;
@@ -30,26 +33,65 @@ namespace Lab_Mouse.Components
         public string draw_flag;
         public bool evidence = false;
         public bool doubleClicked = false;
-        public List<List<double>> binRange = new List<List<double>>();
+        public string capsuletext;
+
         
+ 
+        public List<double> Priors
+        {
+            get { return priors; }
+            set { priors = value; }
+        }
+
+        public List<List<double>> BinRanges
+        {
+            get { return binranges; }
+            set { binranges = value; }
+        }
+
+        //public List<double> Probabilities
+        //{
+        //    get { return probabilities; }
+        //    set { probabilities = value; }
+        //}
+
+
 
         public POutput()
           : base(new GH_InstanceDescription("PDF Output", "POutput",
               "bla bla",
-              "Lab Mouse", "Modeling"))
+              "Lab Mouse", "Parameters"))
         {
             // default starting distribution
-            this.probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+
             this.draw_flag = "h";
-            this.binRange.Add(new List<double> { 0, 1 });
-            this.binRange.Add(new List<double> { 1, 2 });
-            this.binRange.Add(new List<double> { 2, 3 });
-            this.binRange.Add(new List<double> { 3, 4 });
-            this.binRange.Add(new List<double> { 4, 5 });
-            this.binRange.Add(new List<double> { 5, 6 });
-            this.binRange.Add(new List<double> { 6, 7 });
-            this.binRange.Add(new List<double> { 7, 8 });
-        }
+
+            this.Probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 , 0.0};
+
+            this.BinRanges = null;
+
+            //for (int i=0; i<this.Probabilities.Count; i++)
+            //{
+            //    this.binRange.Add(new List<double> { i, i+1 });
+            //}
+            //this.binRange.Add(new List<double> { 0, 1 });
+            //this.binRange.Add(new List<double> { 1, 2 });
+            //this.binRange.Add(new List<double> { 2, 3 });
+            //this.binRange.Add(new List<double> { 3, 4 });
+            //this.binRange.Add(new List<double> { 4, 5 });
+            //this.binRange.Add(new List<double> { 5, 6 });
+            //this.binRange.Add(new List<double> { 6, 7 });
+            //this.binRange.Add(new List<double> { 7, 8 });
+            
+            
+            
+
+
+        //GH_Document doc = OnPingDocument();
+        //IGH_Component MBuilder = doc.FindComponent(this.MBguid);
+        //ModelBuilder mbuilder = MBuilder as ModelBuilder;
+        //this.priors = mbuilder.priors[this.NickName];
+    }
 
         // get user input and construct default probability list 
         public bool getUserInput()
@@ -113,7 +155,12 @@ namespace Lab_Mouse.Components
         // Call to update the PDF of this PSlider
         public void updatePDF(List<double> p)
         {
-            this.probabilities = p;
+            this.Probabilities = p;
+        }
+
+        public void setPriors(List<double> p)
+        {
+            this.priors = p;
         }
 
         // histo grapgh toggle
@@ -138,10 +185,10 @@ namespace Lab_Mouse.Components
             ToolStripMenuItem PDDropdown = GH_DocumentObject.Menu_AppendItem(menu, "Custom PD");
 
             string displayText = "";
-            for (int i = 0; i < this.probabilities.Count; i++)
+            for (int i = 0; i < this.Probabilities.Count; i++)
             {
-                displayText += this.probabilities[i].ToString();
-                if (i != this.probabilities.Count - 1)
+                displayText += this.Probabilities[i].ToString();
+                if (i != this.Probabilities.Count - 1)
                 {
                     displayText += " , ";
                 }
@@ -174,7 +221,7 @@ namespace Lab_Mouse.Components
                 tempPDList.Add(Double.Parse(values[i], CultureInfo.InvariantCulture));
             }
 
-            this.probabilities = tempPDList;
+            this.Probabilities = tempPDList;
 
             ExpireSolution(true);
         }
@@ -182,6 +229,7 @@ namespace Lab_Mouse.Components
         // cancel input event
         private void Cancel_Click(object sender, EventArgs e)
         {
+            
         }
 
         // initialization 
@@ -196,12 +244,14 @@ namespace Lab_Mouse.Components
     // POutput component attributes
     public class POutputAttributes : GH_ResizableAttributes<POutput>
     {
-        private List<double> probabilities;
+       
         POutput own;
-
+        
+        
         public POutputAttributes(POutput owner) : base(owner)
         {
             own = owner;
+    
         }
 
         // minimum size for resizing
@@ -223,26 +273,26 @@ namespace Lab_Mouse.Components
         }
 
         // get points to draw polygon
-        private PointF[] getPts(List<double> Probabilities)
+        private PointF[] getPts(List<double> probabilities)
 
         {
-            int n = Probabilities.Count + 4;
+            int n = probabilities.Count + 4;
             PointF[] points = new PointF[n];
 
             points[0] = new PointF(this.Pivot.X, this.Pivot.Y - 7);
             points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 2, this.Pivot.Y - 7);
 
 
-            if (Probabilities.Count != 0)
+            if (probabilities.Count != 0)
             {
                 // routine to get drawing coordinates based on bin  probabilities
-                for (int i = 0; i < Probabilities.Count; i++)
+                for (int i = 0; i < probabilities.Count; i++)
                 {
                     float rail_width = (int)(points[1].X - points[0].X);
-                    float bin_width = rail_width / Probabilities.Count;
-                    float t = (Probabilities.Count - i) / Probabilities.Count;
+                    float bin_width = rail_width / probabilities.Count;
+                    float t = (probabilities.Count - i) / probabilities.Count;
 
-                    points[i + 3] = new PointF((float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i)) - bin_width * 0.5), this.Pivot.Y - 7 - (glob.max_ht * (float)Probabilities[Probabilities.Count - i - 1]));
+                    points[i + 3] = new PointF((float)((this.Pivot.X) + (bin_width * (probabilities.Count - i)) - bin_width * 0.5), this.Pivot.Y - 7 - (glob.max_ht * (float)probabilities[probabilities.Count - i - 1]));
                 }
             }
 
@@ -254,9 +304,9 @@ namespace Lab_Mouse.Components
 
         // Calculate the background bays for the graph based on Probabilities 
         // return a list of equal size rectangles as background for the render
-        private RectangleF[] getBackgroundBins(List<double> Probabilities)
+        private RectangleF[] getBackgroundBins(List<double> probabilities)
         {
-            int n = Probabilities.Count;
+            int n = probabilities.Count;
             if (n != 1)
             {
                 RectangleF[] backgroundBins = new RectangleF[n];
@@ -267,15 +317,15 @@ namespace Lab_Mouse.Components
                 points[0] = new PointF(this.Pivot.X, this.Pivot.Y - 7);
                 points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 2, this.Pivot.Y - 7);
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         float rail_width = (int)(points[1].X - points[0].X);
-                        float bin_width = rail_width / Probabilities.Count;
+                        float bin_width = rail_width / probabilities.Count;
 
                         backgroundBins[i] = new System.Drawing.RectangleF(
-                            (float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i - 1))),
+                            (float)((this.Pivot.X) + (bin_width * (probabilities.Count - i - 1))),
                             (float)(this.Pivot.Y - 7 - glob.max_ht),
                             (float)bin_width,
                             (float)(glob.max_ht));
@@ -293,15 +343,15 @@ namespace Lab_Mouse.Components
                 points[0] = new PointF(this.Pivot.X, this.Pivot.Y - 7);
                 PointF point = new PointF(this.Pivot.X + (Bounds.Width) - 2, this.Pivot.Y - 7);
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         float rail_width = (int)(point.X - points[0].X);
-                        float bin_width = rail_width / Probabilities.Count;
+                        float bin_width = rail_width / probabilities.Count;
 
                         backgroundBins[i] = new System.Drawing.RectangleF(
-                            (float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i - 1))),
+                            (float)((this.Pivot.X) + (bin_width * (probabilities.Count - i - 1))),
                             (float)(this.Pivot.Y - 7 - glob.max_ht),
                             (float)bin_width,
                             (float)(glob.max_ht));
@@ -314,26 +364,26 @@ namespace Lab_Mouse.Components
 
         // Calculate the background bays for the graph based on Probabilities 
         // return a list of equal size rectangles as background for the render
-        private RectangleF[] getTextholder(List<double> Probabilities)
+        private RectangleF[] getTextholder(List<double> probabilities)
         {
-            int n = Probabilities.Count;
+            int n = own.Probabilities.Count;
             RectangleF[] textholder = new RectangleF[n];
 
             if (n != 1)
             {
                 PointF[] points = new PointF[n];
 
-                float bin_width = (Bounds.Width - 4) / Probabilities.Count;
+                float bin_width = (Bounds.Width - 4) / probabilities.Count;
 
                 points[0] = new PointF(this.Pivot.X + 2, this.Pivot.Y + 62);
                 points[1] = new PointF(this.Pivot.X + (Bounds.Width) - bin_width, this.Pivot.Y + 62);
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         textholder[i] = new System.Drawing.RectangleF(
-                            (float)((this.Pivot.X + 3) + (bin_width * (Probabilities.Count - i - 1))),
+                            (float)((this.Pivot.X + 3) + (bin_width * (probabilities.Count - i - 1))),
                             (float)(this.Pivot.Y + 2),
                             (float)(bin_width - 2),
                             (float)(16));
@@ -346,17 +396,17 @@ namespace Lab_Mouse.Components
             {
                 PointF[] points = new PointF[n];
 
-                float bin_width = (Bounds.Width - 4) / Probabilities.Count;
+                float bin_width = (Bounds.Width - 4) / probabilities.Count;
 
                 points[0] = new PointF(this.Pivot.X + 2, this.Pivot.Y + 62);
                 PointF point = new PointF(this.Pivot.X + (Bounds.Width) - bin_width, this.Pivot.Y + 62);
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         textholder[i] = new System.Drawing.RectangleF(
-                            (float)((this.Pivot.X + 3) + (bin_width * (Probabilities.Count - i - 1))),
+                            (float)((this.Pivot.X + 3) + (bin_width * (probabilities.Count - i - 1))),
                             (float)(this.Pivot.Y + 2),
                             (float)(bin_width - 2),
                             (float)(16));
@@ -369,10 +419,10 @@ namespace Lab_Mouse.Components
         }
 
         // this function gets the coordinates from the probabilities, (same as getPts) but draws a HISTOGRAM shape an irregular polygon from points
-        private PointF[] getHistoPts(List<double> Probabilities)
+        private PointF[] getHistoPts(List<double> probabilities)
 
         {
-            int n = (Probabilities.Count * 2) + 2;
+            int n = (probabilities.Count * 2) + 2;
             PointF[] points = new PointF[n];
 
             if (n != 1)
@@ -381,18 +431,18 @@ namespace Lab_Mouse.Components
                 points[1] = new PointF(this.Pivot.X + (Bounds.Width) - 2, this.Pivot.Y - 7);
 
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
                     int count = 0;
                     // routine to get drawing coordinates based on bin  probabilities
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         float rail_width = (int)(points[1].X - points[0].X);
-                        float bin_width = rail_width / Probabilities.Count;
-                        float t = (Probabilities.Count - i) / Probabilities.Count;
+                        float bin_width = rail_width / probabilities.Count;
+                        float t = (probabilities.Count - i) / probabilities.Count;
 
-                        points[count + 2] = new PointF((float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i))), this.Pivot.Y - 7 - (glob.max_ht * (float)Probabilities[Probabilities.Count - i - 1]));
-                        points[count + 2 + 1] = new PointF((float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i - 1))), this.Pivot.Y - 7 - (glob.max_ht * (float)Probabilities[Probabilities.Count - i - 1]));
+                        points[count + 2] = new PointF((float)((this.Pivot.X) + (bin_width * (probabilities.Count - i))), this.Pivot.Y - 7 - (glob.max_ht * (float)probabilities[probabilities.Count - i - 1]));
+                        points[count + 2 + 1] = new PointF((float)((this.Pivot.X) + (bin_width * (probabilities.Count - i - 1))), this.Pivot.Y - 7 - (glob.max_ht * (float)probabilities[probabilities.Count - i - 1]));
                         count += 2;
                     }
                 }
@@ -404,18 +454,18 @@ namespace Lab_Mouse.Components
                 PointF point = new PointF(this.Pivot.X + (Bounds.Width) - 2, this.Pivot.Y - 7);
 
 
-                if (Probabilities.Count != 0)
+                if (probabilities.Count != 0)
                 {
                     int count = 0;
                     // routine to get drawing coordinates based on bin  probabilities
-                    for (int i = 0; i < Probabilities.Count; i++)
+                    for (int i = 0; i < probabilities.Count; i++)
                     {
                         float rail_width = (int)(point.X - points[0].X);
-                        float bin_width = rail_width / Probabilities.Count;
-                        float t = (Probabilities.Count - i) / Probabilities.Count;
+                        float bin_width = rail_width / probabilities.Count;
+                        float t = (probabilities.Count - i) / probabilities.Count;
 
-                        points[count + 2] = new PointF((float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i))), this.Pivot.Y - 7 - (glob.max_ht * (float)Probabilities[Probabilities.Count - i - 1]));
-                        points[count + 2 + 1] = new PointF((float)((this.Pivot.X) + (bin_width * (Probabilities.Count - i - 1))), this.Pivot.Y - 7 - (glob.max_ht * (float)Probabilities[Probabilities.Count - i - 1]));
+                        points[count + 2] = new PointF((float)((this.Pivot.X) + (bin_width * (probabilities.Count - i))), this.Pivot.Y - 7 - (glob.max_ht * (float)probabilities[probabilities.Count - i - 1]));
+                        points[count + 2 + 1] = new PointF((float)((this.Pivot.X) + (bin_width * (probabilities.Count - i - 1))), this.Pivot.Y - 7 - (glob.max_ht * (float)probabilities[probabilities.Count - i - 1]));
                         count += 2;
                     }
                 }
@@ -425,35 +475,53 @@ namespace Lab_Mouse.Components
 
         }
 
+       
+
         // double click event handler
         public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
         {
             System.Drawing.RectangleF[] rec = backgroundBinBounds;
-
+           
             own.evidence = true;
             own.doubleClicked = true;
-
+   
+            // for each bin
             for (int i = 0; i < rec.Length; i++)
             {
-                if (rec[i].Contains(e.CanvasLocation))
+                // if mouse is inside bin rectangle
+                if (rec[i].Contains(e.CanvasLocation)) 
                 {
+
+                   
+                    
                     int pos = rec.Length - i - 1;
 
-                    for (int j = 0; j < own.probabilities.Count; j++)
+                    
+                    for (int j = 0; j < own.Probabilities.Count; j++)
                     {
+                        // set all non-evidence bins to zero probability
                         if (j != pos)
                         {
-                            own.probabilities[j] = 0;
+                            
+                            own.Probabilities[j] = 0;
+                           
                         }
                     }
 
-                    if (own.probabilities[pos] == 1)
-                    {
-                        own.probabilities[pos] = 0;
+
+                    // if unclick
+                    if (own.Probabilities[pos] == 1)
+                    { 
+                        own.Probabilities = new List<double>(own.Priors); // set back to priors
+                        own.ExpireSolution(true);
+
                     }
+
+                    // if bin has mouse in it
                     else
                     {
-                        own.probabilities[pos] = 1;
+                        own.Probabilities[pos] = 1;
+                        
                     }
 
                     Owner.OnDisplayExpired(true);
@@ -579,9 +647,9 @@ namespace Lab_Mouse.Components
             int width = GH_FontServer.StringWidth(Owner.NickName, GH_FontServer.Standard);
             PointF p = new PointF(this.Pivot.X + width + 19, this.Pivot.Y - 7);
 
-            List<double> probs = own.probabilities;
+            List<double> probs = own.Probabilities;
 
-            PointF[] pts = getHistoPts(own.probabilities);
+            PointF[] pts = getHistoPts(own.Probabilities);
 
             if (own.draw_flag == "s")
             {
@@ -616,7 +684,7 @@ namespace Lab_Mouse.Components
 
             // Rui 
             // render background bins
-            RectangleF[] backgroundBins = getBackgroundBins(own.probabilities);
+            RectangleF[] backgroundBins = getBackgroundBins(own.Probabilities);
             graphics.DrawRectangles(pen3, backgroundBins);
             graphics.FillRectangles(sb, backgroundBins);
 
@@ -627,16 +695,19 @@ namespace Lab_Mouse.Components
             graphics.FillPolygon(lb, pts);
 
             // draw text capsules
-            RectangleF[] textholderBounds = getTextholder(own.probabilities);
+            RectangleF[] textholderBounds = getTextholder(own.Probabilities);
             GH_Capsule[] textCapsules = new GH_Capsule[textholderBounds.Length];
 
             int numbins = textCapsules.Length;
 
-            for (int i = 0; i < numbins; i++)
+            if (own.BinRanges != null)
             {
-                //textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + own.binRange[numbins-1-i][1], 3, 0);
-                textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, own.binRange[numbins - 1 - i][0]+ "<=" + own.binRange[numbins - 1 - i][1], 3, 0);
-                textCapsules[i].Render(graphics, Selected, Owner.Locked, false);
+                for (int i = 0; i < numbins; i++)
+                {
+                    //textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + own.binRange[numbins-1-i][1], 3, 0);
+                    textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, Math.Round(own.BinRanges[numbins - 1 - i][0],2) + "<" + Math.Round(own.BinRanges[numbins - 1 - i][1],2), 3, 0);
+                    textCapsules[i].Render(graphics, Selected, Owner.Locked, false);
+                }
             }
         }
     }

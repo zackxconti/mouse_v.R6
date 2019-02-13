@@ -60,6 +60,8 @@ namespace Lab_Mouse.Components
 
         }
 
+
+
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
@@ -288,6 +290,8 @@ namespace Lab_Mouse.Components
                 sliders.Add(slider);
                 this.pluggedSliders.Add(slider);
 
+                
+
                 var nickname = source.NickName;
                 names.Add(nickname.ToString() ); // Add slider name to global list 
                 var minimum = (slider.Slider.Minimum).ToString("0.00");
@@ -337,7 +341,7 @@ namespace Lab_Mouse.Components
                 //string type = "sobol";
                 Arguments.Add(this.samplingAlgorithm);
 
-                int samplesize = 100;
+                int samplesize = 1000;
                 Arguments.Add(samplesize.ToString());
             
                 // Generate samples by calling sampling Python script //
@@ -363,21 +367,26 @@ namespace Lab_Mouse.Components
                 // this more flexible in production code).
 
                 var outputs = Params.Input[1].Sources;
-                List<Param_Number> pluggedOutputs = new List<Param_Number>();
+                //List<Param_Number> pluggedOutputs = new List<Param_Number>();
+                List<POutput> pluggedPOutputs = new List<POutput>();
                 for (int o = 0; o < outputs.Count; o++)
                 {
-                    pluggedOutputs.Add(outputs[o] as Param_Number);
+                    pluggedPOutputs.Add(outputs[o] as POutput);
                     this.pluggedOutputNames.Add(outputs[o].NickName.ToString());
+                   
                 }
 
-                for (int o=0; o < pluggedOutputs.Count; o++)
+                for (int o=0; o < pluggedPOutputs.Count; o++)
                 {
-                    if (pluggedOutputs[o] == null)
+
+                    if (pluggedPOutputs[o] == null)
                     {
-                        Rhino.RhinoApp.Write("One of the plugged output parameters is not of type Param_Number.");
+                        Rhino.RhinoApp.Write("One of the plugged output parameters is not of type POutput.");
                         return;
                     }
                 }
+
+                
                 //Param_Number outcome = Params.Input[1].Sources[0] as Param_Number;
 
                 // Now that we have a bunch of sliders and a measure parameter, 
@@ -416,10 +425,10 @@ namespace Lab_Mouse.Components
                     string measure = "no values yet";
 
                     // for each output that is plugged in, store each output value 
-                    for (int o = 0; o < pluggedOutputs.Count; o++)
+                    for (int o = 0; o < pluggedPOutputs.Count; o++)
                     {
                         // access stored output value
-                        var volatileData = pluggedOutputs[o].VolatileData as GH_Structure<GH_Number>;
+                        var volatileData = pluggedPOutputs[o].VolatileData as GH_Structure<GH_Number>;
 
                         if (volatileData != null)
                         {
