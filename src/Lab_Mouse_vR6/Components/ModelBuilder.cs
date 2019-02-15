@@ -43,6 +43,7 @@ namespace Lab_Mouse.Components
         public List<string> directory;
         public IGH_Component datagencomponent;
         public GH_Document doc;
+        public string csvfilepath;
 
 
 
@@ -61,6 +62,7 @@ namespace Lab_Mouse.Components
             this.directory = new List<string>();
             this.datagencomponent = null;
             this.doc = null;
+            this.csvfilepath = null;
         }
 
         /// <summary>
@@ -155,6 +157,9 @@ namespace Lab_Mouse.Components
 
             this.targets = new List<string>(targetnames);
 
+            string projfilename = Path.GetFileNameWithoutExtension(this.doc.FilePath);
+            this.csvfilepath = Path.Combine(this.directory[0], projfilename + "_CSVdata.txt");
+
 
         }
 
@@ -221,8 +226,9 @@ namespace Lab_Mouse.Components
 
             //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py");
             string IPCbuildPath = Path.Combine(this.directory[0], "Lab_Mouse\\IPC_scripts\\buildButton_IPC.py");
-            string projfilename = Path.GetFileNameWithoutExtension(this.doc.FilePath);
-            string csvfilepath = Path.Combine(this.directory[0], projfilename+"_CSVdata.txt");
+            //string projfilename = Path.GetFileNameWithoutExtension(this.doc.FilePath);
+            //this.csvfilepath = Path.Combine(this.directory[0], projfilename+"_CSVdata.txt");
+            
 
             //string csvfilepath = "C:/Users/tij/Desktop/Zack/LabMouse_Dev/SimulationData.txt";
 
@@ -231,7 +237,7 @@ namespace Lab_Mouse.Components
             List<System.Object> Arguments = new List<System.Object>();
 
             // Add csvfilepath to list of Arguments
-            Arguments.Add(csvfilepath);
+            Arguments.Add(this.csvfilepath);
 
             /*
             // get target names from POutput compnent nicknames and store as targetnames
@@ -350,6 +356,7 @@ namespace Lab_Mouse.Components
 
            // using (StreamWriter file = new StreamWriter(Path.Combine(this.directory[0], "evidence.txt")))
             string jsonevidence = JsonConvert.SerializeObject(evidence.ToArray());
+
             using (StreamWriter file = File.CreateText(Path.Combine(this.directory[0], "evidence.txt")))
             {
                 JsonSerializer serializer = new JsonSerializer();
@@ -624,23 +631,21 @@ namespace Lab_Mouse.Components
                     {
                         CSVtype csvinput = own.Params.Input[0].Sources[0] as CSVtype;
 
-                        if (csvinput == null)
+                        if (!File.Exists(own.csvfilepath))
                         {
                             
                             DialogResult result = MessageBox.Show("No data has been generated.", "Warning");
                         }
 
-                        if (own.datagencomponent.Params.Input[0].SourceCount == 0 || own.datagencomponent.Params.Input[1].SourceCount == 0 || own.datagencomponent.Params.Input[2].SourceCount == 0)
+                        else if (own.datagencomponent.Params.Input[0].SourceCount == 0 || own.datagencomponent.Params.Input[1].SourceCount == 0 || own.datagencomponent.Params.Input[2].SourceCount == 0)
 
                         {
                             DialogResult result = MessageBox.Show("Datagenerator is missing some inputs.", "Warning");
                         }
 
-
-
                         else
                         {
-                            modelbld.RunSolver_BuildBN();
+                           modelbld.RunSolver_BuildBN();
                         }
                     }
 
@@ -651,15 +656,24 @@ namespace Lab_Mouse.Components
                 if (rec2.Contains(e.CanvasLocation))
                 {
 
-                    if (modelbld.model == null)
+                    if (own.Params.Input[0].Sources.Count == 0) // if no inputs are plugged in 
                     {
-                        DialogResult result = MessageBox.Show("No model has been built. Please build model before updating.", "Warning");
-                    }
+                        DialogResult result = MessageBox.Show("Datagenerator is not connected.", "Warning");
 
+                    }
                     else
                     {
-                        modelbld.RunSolver_UpdateBN();
+                        if (modelbld.model == null)
+                        {
+                            DialogResult result = MessageBox.Show("No model has been built. Please build model before updating.", "Warning");
+                        }
+                        else
+                        {
+                            modelbld.RunSolver_UpdateBN();
+                        }
                     }
+
+
 
 
                     return GH_ObjectResponse.Handled;
@@ -669,16 +683,23 @@ namespace Lab_Mouse.Components
                 if (rec3.Contains(e.CanvasLocation))
                 {
 
-                    if (modelbld.model == null)
+                    if (own.Params.Input[0].Sources.Count == 0) // if no inputs are plugged in 
                     {
-                        DialogResult result = MessageBox.Show("Nothing to reset. No model has been built.", "Warning");
-                    }
+                        DialogResult result = MessageBox.Show("Datagenerator is not connected.", "Warning");
 
+                    }
                     else
                     {
-                        modelbld.RunSolver_ResetBN();
-                    }
+                        if (modelbld.model == null)
+                        {
+                            DialogResult result = MessageBox.Show("Nothing to reset. No model has been built.", "Warning");
+                        }
 
+                        else
+                        {
+                            modelbld.RunSolver_ResetBN();
+                        }
+                    }
 
                     return GH_ObjectResponse.Handled;
                 }

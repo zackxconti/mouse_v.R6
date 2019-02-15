@@ -41,6 +41,7 @@ namespace Lab_Mouse.Components
         public float min;
         public string draw_flag;
         public bool evidence = false;
+        public bool customPD = false;
         public List<List<double>> binRange = new List<List<double>>();
 
         public List<double> Probabilities
@@ -122,7 +123,7 @@ namespace Lab_Mouse.Components
                                 null,
                                 new GH_MenuTextBox.TextChangedEventHandler(updatePD),
                                 true);
-
+            
             PDDropdown.DropDown.Items[1].Click += (obj, e) => OK_Click(obj, e);
             PDDropdown.DropDown.Items[2].Click += (obj, e) => Cancel_Click(obj, e);
 
@@ -160,7 +161,9 @@ namespace Lab_Mouse.Components
         private void updatePD(object sender, string text)
         {
             this.tempPD = text;
+            this.customPD = true;
         }
+
 
         public void menuItemHisto(object sender, EventArgs e)
         {
@@ -176,6 +179,11 @@ namespace Lab_Mouse.Components
         public void updatePDF(List<double> p)
         {
             this.Probabilities = p;
+        }
+
+        public void emptyPD()
+        {
+            this.Probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0 };
         }
 
         /// <summary>

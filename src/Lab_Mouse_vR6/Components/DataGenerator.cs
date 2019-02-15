@@ -25,11 +25,31 @@ namespace Lab_Mouse.Components
         public string samplingAlgorithm;
         public bool generate_flag;
         public List<GH_NumberSlider> pluggedSliders;
+        public List<POutput> pluggedPOutputs;
         public CSVtype csvdata;
         public List<string> pluggedSliderNames;
         public List<string> pluggedOutputNames;
+        public string csvfilepath;
         // public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
         //public List<Grasshopper.GUI.GH_Slider> pluggedSliders;
+
+        private bool m_absolute = false;
+        public bool Absolute
+        {
+            get { return m_absolute; }
+            set
+            {
+                m_absolute = value;
+                if ((m_absolute))
+                {
+                    Message = "Generating...";
+                }
+                else
+                {
+                    Message = "Standard";
+                }
+            }
+        }
 
         public DataGenerator()
           : base("DataGenerator", 
@@ -44,7 +64,9 @@ namespace Lab_Mouse.Components
             this.pluggedSliderNames = new List<string>();
             this.pluggedOutputNames = new List<string>();
             this.pluggedSliders = new List<GH_NumberSlider>();
+            this.pluggedPOutputs = new List<POutput>();
             this.samplingAlgorithm = "sobol"; // by default,sobol sequece is used 
+            this.csvfilepath = null;
 
 
         }
@@ -87,6 +109,7 @@ namespace Lab_Mouse.Components
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             DA.SetData(0, this.csvdata);
+            
 
             
         }
@@ -179,6 +202,8 @@ namespace Lab_Mouse.Components
             foreach (string line in lines)
             {
                 List<double> row = new List<double>();
+
+                //ISSUE WITH REPEATED SAMPLING MIGHT BE HERE
 
                 string [] cols = line.Split(',');
 
@@ -290,7 +315,7 @@ namespace Lab_Mouse.Components
                     return;
                 }
                 sliders.Add(slider);
-                this.pluggedSliders.Add(slider);
+                //this.pluggedSliders.Add(slider);
 
                 
 
@@ -302,9 +327,10 @@ namespace Lab_Mouse.Components
                 var newLine = string.Format("{0}, {1}, {2}", nickname, minimum, maximum);
                 csv.AppendLine(newLine);
 
+
                 // now write slider_ranges list to csv file and pass as parameter for python system call 
             }
-
+            this.pluggedSliders = sliders;
             this.pluggedSliderNames = names;
 
             //string direc = this.Params.Input[2].Sources[0].VolatileData.ToString(); // need to check what this is returning 
@@ -343,7 +369,7 @@ namespace Lab_Mouse.Components
                 //string type = "sobol";
                 Arguments.Add(this.samplingAlgorithm);
 
-                int samplesize = 1000;
+                int samplesize = 200;
                 Arguments.Add(samplesize.ToString());
             
                 // Generate samples by calling sampling Python script //
@@ -370,30 +396,52 @@ namespace Lab_Mouse.Components
 
                 var outputs = Params.Input[1].Sources;
                 
-                List<POutput> pluggedPOutputs = new List<POutput>();
+                List<POutput> poutputs = new List<POutput>();
                 List<string> outnames = new List<string>();
 
-                for (int o = 0; o < outputs.Count; o++)
+
+                foreach (IGH_Param source in outputs)
                 {
-                    pluggedPOutputs.Add(outputs[o] as POutput);
-                    outnames.Add(outputs[o].NickName.ToString());
-
-                }
-
-                //update list of plugged output names property
-                this.pluggedOutputNames = new List<string>(outnames);
-
-                for (int o=0; o < pluggedPOutputs.Count; o++)
-                {
-
-                    if (pluggedPOutputs[o] == null)
+                    POutput poutput = source as POutput;
+                    if (poutput == null)
                     {
-                        Rhino.RhinoApp.Write("One of the plugged output parameters is not of type POutput.");
+                        Rhino.RhinoApp.Write("One of the outputs is not of POutput type");
                         return;
                     }
+                    poutputs.Add(poutput);
+                    outnames.Add(poutput.NickName.ToString());
+
+
+
+                    var nickname = source.NickName;
                 }
 
-                
+                this.pluggedPOutputs = new List<POutput>(poutputs);
+                this.pluggedOutputNames = new List<string>(outnames);
+                //for (int o = 0; o < outputs.Count; o++)
+                //{
+                //    poutputs.Add(outputs[o] as POutput);
+                //    outnames.Add(outputs[o].NickName.ToString());
+
+                //}
+
+                //update list of plugged POutputs
+                //this.pluggedPOutputs = new List<POutput>(poutputs);
+
+                //update list of plugged output names property
+                //this.pluggedOutputNames = new List<string>(outnames);
+
+                //for (int o=0; o < pluggedPOutputs.Count; o++)
+                //{
+
+                //    if (this.pluggedPOutputs[o] == null)
+                //    {
+                //        Rhino.RhinoApp.Write("One of the plugged output parameters is not of type POutput.");
+                //        return;
+                //    }
+                //}
+
+
                 //Param_Number outcome = Params.Input[1].Sources[0] as Param_Number;
 
                 // Now that we have a bunch of sliders and a measure parameter, 
@@ -407,9 +455,9 @@ namespace Lab_Mouse.Components
                 // loop through list of Samples
                 for (int i = 0; i < Samples.Count; i++)
                 {
-                    for (int j = 0; j < sliders.Count; j++)
+                    for (int j = 0; j < this.pluggedSliders.Count; j++)
                     {
-                        sliders[j].SetSliderValue((decimal)Samples[i][j]); // does not work 
+                        this.pluggedSliders[j].SetSliderValue((decimal)Samples[i][j]); // does not work 
                     }
 
 
@@ -420,7 +468,7 @@ namespace Lab_Mouse.Components
                     // For each Sample vector, harvest the actual slider values.
                     List<string> sliderValuesTxt = new List<string>();
                     List<double> sliderValues = new List<double>();
-                    foreach (GH_NumberSlider slider in sliders)
+                    foreach (GH_NumberSlider slider in this.pluggedSliders)
                     {
                         sliderValuesTxt.Add(slider.Slider.GripText); // save as text for printing to console                
                         csvrow.Add((double)slider.Slider.Value); // cast slider value from decimal to double 
@@ -432,10 +480,10 @@ namespace Lab_Mouse.Components
                     string measure = "no values yet";
 
                     // for each output that is plugged in, store each output value 
-                    for (int o = 0; o < pluggedPOutputs.Count; o++)
+                    for (int o = 0; o < this.pluggedPOutputs.Count; o++)
                     {
                         // access stored output value
-                        var volatileData = pluggedPOutputs[o].VolatileData as GH_Structure<GH_Number>;
+                        var volatileData = this.pluggedPOutputs[o].VolatileData as GH_Structure<GH_Number>;
 
                         if (volatileData != null)
                         {
@@ -451,6 +499,7 @@ namespace Lab_Mouse.Components
                 }
                 // Update CSVtype with generated csvdata
                 string projfilename = Path.GetFileNameWithoutExtension(doc.FilePath);
+                this.csvfilepath = Path.Combine(directory, projfilename + "_CSVdata.txt");
                 this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd, directory, projfilename+ "_CSVdata"); 
                 
                 // Write csv data to text file in user-specified directory
@@ -513,24 +562,61 @@ namespace Lab_Mouse.Components
                 {
                     //int num  = numSld;
 
-                    
-                    int numsliders = own.Params.Input[0].SourceCount;
-                    if (numsliders != 0) { 
-                        DialogResult result = MessageBox.Show("You have "+numsliders+" input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
+                    //if no data has been generated
+                    if (File.Exists(own.csvfilepath))
+                    {
+                        DialogResult result = MessageBox.Show("Data already exists. Are you sure you would like to generate new data?", "Slider Automator", MessageBoxButtons.YesNo);
 
                         if (result == DialogResult.Yes)
                         {
+                            // first empty all PSlider and POutput PD bins
+                            foreach (PSlider slider in own.pluggedSliders)
+                            {
+                                slider.emptyPD();
+                            }
+
+                            foreach (POutput output in own.pluggedPOutputs)
+                            {
+                                output.emptyPD();
+                            }
+
+                            own.ExpireSolution(true);
+
+                            // generate data 
+                            own.Message = "Generating data...";
                             datgen.RunSolver();
                         }
                         else if (result == DialogResult.No)
                         {
                             // do nothing
                         }
+
                     }
+
                     else
                     {
-                        DialogResult result = MessageBox.Show("No sliders are connected!", "Slider Automator");
+                        int numsliders = own.Params.Input[0].SourceCount;
+                        if (numsliders != 0)
+                        {
+                            DialogResult result = MessageBox.Show("You have " + numsliders + " input sliders connected. Go ahead?", "Slider Automator", MessageBoxButtons.YesNo);
+
+                            if (result == DialogResult.Yes)
+                            {
+                                //own.Message = "Generating data...";
+                                datgen.RunSolver();
+                            }
+                            else if (result == DialogResult.No)
+                            {
+                                // do nothing
+                            }
+                        }
+                        else
+                        {
+                            DialogResult result = MessageBox.Show("No sliders are connected!", "Warning");
+                        }
                     }
+                
+
 
 
                     return GH_ObjectResponse.Handled;

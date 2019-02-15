@@ -23,6 +23,7 @@ namespace Lab_Mouse.Components
         public List<double> probabilities;
         private List<double> priors = new List<double>(); // need to find ModelBuilder and take prior 
         private List<List<double>> binranges;
+        public bool customPD = false;
 
         // default starting string, need to be the same as the default starting probability distribution
         public string tempPD = "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0";
@@ -129,12 +130,18 @@ namespace Lab_Mouse.Components
         private void updatePD(object sender, string text)
         {
             this.tempPD = text;
+            this.customPD = true;
         }
 
         // Call to update the PDF of this PSlider
         public void updatePDF(List<double> p)
         {
             this.Probabilities = p;
+        }
+
+        public void emptyPD()
+        {
+            this.Probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0 };
         }
 
         public void setPriors(List<double> p)
