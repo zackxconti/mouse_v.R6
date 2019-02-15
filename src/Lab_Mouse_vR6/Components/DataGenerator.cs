@@ -87,6 +87,8 @@ namespace Lab_Mouse.Components
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             DA.SetData(0, this.csvdata);
+
+            
         }
 
         /// <summary>
@@ -331,7 +333,7 @@ namespace Lab_Mouse.Components
                 File.WriteAllText(ranges_filepath, csv.ToString());
 
                 /// run python script to generate samples ///
-                string samplingscript_filepath = Path.Combine(directory, "intercommunication_script.py");
+                string samplingscript_filepath = Path.Combine(directory, "Lab_Mouse\\IPC_scripts\\datagen_IPC.py");
 
                 //string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
 
@@ -367,14 +369,19 @@ namespace Lab_Mouse.Components
                 // this more flexible in production code).
 
                 var outputs = Params.Input[1].Sources;
-                //List<Param_Number> pluggedOutputs = new List<Param_Number>();
+                
                 List<POutput> pluggedPOutputs = new List<POutput>();
+                List<string> outnames = new List<string>();
+
                 for (int o = 0; o < outputs.Count; o++)
                 {
                     pluggedPOutputs.Add(outputs[o] as POutput);
-                    this.pluggedOutputNames.Add(outputs[o].NickName.ToString());
-                   
+                    outnames.Add(outputs[o].NickName.ToString());
+
                 }
+
+                //update list of plugged output names property
+                this.pluggedOutputNames = new List<string>(outnames);
 
                 for (int o=0; o < pluggedPOutputs.Count; o++)
                 {
@@ -443,7 +450,8 @@ namespace Lab_Mouse.Components
                     Rhino.RhinoApp.WriteLine("({0}) = {1:0.00000}", string.Join(", ", sliderValuesTxt), measure);                    
                 }
                 // Update CSVtype with generated csvdata
-                this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd, directory); 
+                string projfilename = Path.GetFileNameWithoutExtension(doc.FilePath);
+                this.csvdata = new CSVtype(this.pluggedSliderNames, this.pluggedOutputNames, csvd, directory, projfilename+ "_CSVdata"); 
                 
                 // Write csv data to text file in user-specified directory
                 this.csvdata.writeCSV(directory);

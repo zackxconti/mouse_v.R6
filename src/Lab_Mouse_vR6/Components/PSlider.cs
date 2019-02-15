@@ -383,6 +383,7 @@ namespace Lab_Mouse.Components
                     {
                       
                         own.probabilities = new List<double>(own.priors);
+                        own.evidence = false;
                         own.ExpireSolution(true);
                     }
                     else

@@ -33,20 +33,16 @@ namespace Lab_Mouse.Components
         /// Initializes a new instance of the ModelBuilder class.
         /// </summary>
         /// 
-        
-
-        //Dictionary<string, string> model;
-        
-        
-
+    
         public Dictionary<string, List<double>> priors;
         public Dictionary<string, List<List<double>>> BinRanges;
-        public string model;
-        List<PSlider> PSliders;
-        List<POutput> POutputs;
-        List<string> targets;
+        public JObject model;
+        public List<PSlider> PSliders;
+        public List<POutput> POutputs;
+        public List<string> targets;
         public List<string> directory;
-        IGH_Component datagencomponent;
+        public IGH_Component datagencomponent;
+        public GH_Document doc;
 
 
 
@@ -63,10 +59,8 @@ namespace Lab_Mouse.Components
             this.POutputs = null;
             this.targets = null;
             this.directory = new List<string>();
-
-
-
-
+            this.datagencomponent = null;
+            this.doc = null;
         }
 
         /// <summary>
@@ -91,6 +85,7 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            getdatagenInputParams(); // get info about sliders, outputs, directory, and datagen component connected to this model builder
         }
 
         public static Dictionary<string, TValue> ToDictionary<TValue>(object obj)
@@ -103,7 +98,7 @@ namespace Lab_Mouse.Components
         public void  getdatagenInputParams ()
         {
             // Get the document this component belongs to.
-            GH_Document doc = OnPingDocument();
+            this.doc = OnPingDocument();
             if (doc == null) return;
 
             //CSVtype csvinput = this.Params.Input[0].Sources[0] as CSVtype;
@@ -163,14 +158,10 @@ namespace Lab_Mouse.Components
 
         }
 
-       
-
-   
-
         public void RunSolver_BuildBN() // TODO: one 'runsolver()' function needed for each button 
 
         {
-            getdatagenInputParams();
+            //getdatagenInputParams(); // this function does not need to be called here because it is being called in SolveInstance.
             /*
             // Get the document this component belongs to.
             GH_Document doc = OnPingDocument();
@@ -229,8 +220,9 @@ namespace Lab_Mouse.Components
             */
 
             //string IPCbuildPath = Path.Combine(directory[0], "buildButton_IPC.py");
-            string IPCbuildPath = Path.Combine(this.directory[0], "buildButton_IPC.py"); 
-            string csvfilepath = Path.Combine(this.directory[0], "SimulationData.txt");
+            string IPCbuildPath = Path.Combine(this.directory[0], "Lab_Mouse\\IPC_scripts\\buildButton_IPC.py");
+            string projfilename = Path.GetFileNameWithoutExtension(this.doc.FilePath);
+            string csvfilepath = Path.Combine(this.directory[0], projfilename+"_CSVdata.txt");
 
             //string csvfilepath = "C:/Users/tij/Desktop/Zack/LabMouse_Dev/SimulationData.txt";
 
@@ -265,6 +257,8 @@ namespace Lab_Mouse.Components
             //Arguments.Add(targetnames_json);
             Arguments.Add(string.Join(",",this.targets));
 
+            //Add dirctory path
+            Arguments.Add(this.directory[0]);
 
             // Now, that we have all the necessary information to build the Bayesian Network, we can run the python script
             // runPythonScript will return 3 arguments: [0] {this.E, this.V, this.Vdata} [1] numbinsDict, [2] priors
@@ -280,12 +274,13 @@ namespace Lab_Mouse.Components
             Dictionary<string, List<List<double>>> binranges = json["binranges"].ToObject<Dictionary<string, List<List<double>>>>();
 
             // store json model as string 
-            string jsonmodel = json["model"].ToString();
+            var jsonmodel = json["model"];
+            
 
             // update ModelBuilder properties
             this.priors = priorpds;
             this.BinRanges = binranges;
-            this.model = jsonmodel;
+            this.model = jsonmodel as JObject;
             
   
             // loop through the PSliders to update priors 
@@ -316,11 +311,24 @@ namespace Lab_Mouse.Components
 
         }
 
+        string GetLine(Dictionary<string, List<List<double>>> d)
+        {
+            // Build up each line one-by-one and then trim the end
+            StringBuilder builder = new StringBuilder();
+            foreach (KeyValuePair<string, List<List<double>>> pair in d)
+            {
+                builder.Append(pair.Key).Append(":").Append(pair.Value).Append(',');
+            }
+            string result = builder.ToString();
+            // Remove the final delimiter
+            result = result.TrimEnd(',');
+            return result;
+        }
+
         public void RunSolver_UpdateBN() // TODO: one 'runsolver()' function needed for each button 
         {
-
+            string IPCupdatePath = Path.Combine(this.directory[0], "Lab_Mouse\\IPC_scripts\\updateButton_IPC.py");
             Dictionary<string, List<double>> evidence = new Dictionary<string, List<double>>();
-            string IPCupdatePath = Path.Combine(this.directory[0], "buildButton_IPC.py");
             Dictionary<string, List<double>> allposteriors;
 
             // search through Psliders to check their evidence flag status 
@@ -340,23 +348,66 @@ namespace Lab_Mouse.Components
                 }
             }
 
-            
+           // using (StreamWriter file = new StreamWriter(Path.Combine(this.directory[0], "evidence.txt")))
+            string jsonevidence = JsonConvert.SerializeObject(evidence.ToArray());
+            using (StreamWriter file = File.CreateText(Path.Combine(this.directory[0], "evidence.txt")))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                //serialize object directly into file stream
+                serializer.Serialize(file, evidence);
+            }
+
 
             if (this.model != null)
             {
                
                 List<System.Object> Arguments = new List<System.Object>();
                 // note: the order in which the following are added, is order sensitive 
-                Arguments.Add(this.model);
+                //Arguments.Add(this.model);
+                Arguments.Add(this.directory[0]);
                 Arguments.Add(this.targets);
-                Arguments.Add(this.BinRanges);                
-                Arguments.Add(evidence);
+                //Arguments.Add(GetLine(this.BinRanges));                
+               // Arguments.Add(evidence);
 
-                //string jsonArguments = runPythonScript(IPCupdatePath, Arguments)[0];
+
+                string jsonArguments = runPythonScript(IPCupdatePath, Arguments)[0];
+                int f = 3;
+
+                // Parse arguments to deserialise json string 
+                var json = JObject.Parse(jsonArguments);
+
+                // store json posteriors into a dict
+                Dictionary<string, List<double>> posteriorpds = json["posteriors"].ToObject<Dictionary<string, List<double>>>();
+
+                // loop through the PSliders to update priors 
+                foreach (PSlider slider in this.PSliders)
+                {
+                    string name = slider.NickName;
+
+                    List<double> pd = posteriorpds[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                    slider.updatePDF(new List<double>(pd));
+                    
+
+                    ExpireSolution(true);
+                }
+
+                // loop through the Poutputs to update their PDs and ranges
+                foreach (POutput pout in this.POutputs)
+                {
+                    string name = pout.NickName;
+                    List<double> pd = posteriorpds[name].ToList(); // gets corresponding array of probabilities and converts to list 
+                    pout.updatePDF(new List<double>(pd));
+                    
+
+                    
+                    
+
+                    ExpireSolution(true);
+                }
 
             }
 
-            // allposteriors = runpythonscript (this.model, this.targets, evidence)
+           
 
             //update Psliders
 
@@ -558,12 +609,40 @@ namespace Lab_Mouse.Components
             if (e.Button == System.Windows.Forms.MouseButtons.Left)
             {
                 ModelBuilder modelbld = Owner as ModelBuilder;
+                
 
                 System.Drawing.RectangleF rec1 = Button1Bounds;
                 if (rec1.Contains(e.CanvasLocation))
                 {
-      
-                    modelbld.RunSolver_BuildBN();
+
+                    if (own.Params.Input[0].Sources.Count == 0) // if no inputs are plugged in 
+                    {
+                        DialogResult result = MessageBox.Show("Datagenerator is not connected.", "Warning");
+
+                    }
+                    else
+                    {
+                        CSVtype csvinput = own.Params.Input[0].Sources[0] as CSVtype;
+
+                        if (csvinput == null)
+                        {
+                            
+                            DialogResult result = MessageBox.Show("No data has been generated.", "Warning");
+                        }
+
+                        if (own.datagencomponent.Params.Input[0].SourceCount == 0 || own.datagencomponent.Params.Input[1].SourceCount == 0 || own.datagencomponent.Params.Input[2].SourceCount == 0)
+
+                        {
+                            DialogResult result = MessageBox.Show("Datagenerator is missing some inputs.", "Warning");
+                        }
+
+
+
+                        else
+                        {
+                            modelbld.RunSolver_BuildBN();
+                        }
+                    }
 
                     return GH_ObjectResponse.Handled;
                 }
@@ -592,7 +671,7 @@ namespace Lab_Mouse.Components
 
                     if (modelbld.model == null)
                     {
-                        DialogResult result = MessageBox.Show("Nothing to reset. Model has been built.", "Warning");
+                        DialogResult result = MessageBox.Show("Nothing to reset. No model has been built.", "Warning");
                     }
 
                     else

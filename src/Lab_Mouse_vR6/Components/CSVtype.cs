@@ -13,13 +13,15 @@ using System.Threading.Tasks;
         public List<string> outNames;
         public List<List<double>> values;
         public string filedir;
+        public string csvfilename;
 
-        public CSVtype(List<string> paramNames, List <string> outputNames, List<List<double>> vals, String filedirectory) 
+        public CSVtype(List<string> paramNames, List <string> outputNames, List<List<double>> vals, String filedirectory, string filename) 
         {
             paraNames = paramNames;
             outNames = outputNames;
             values = vals;
             filedir = filedirectory;
+            csvfilename = filename;
         
         }
         
@@ -55,7 +57,7 @@ using System.Threading.Tasks;
             //Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
             // Write the string array to a new file named "WriteLines.txt".
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "SimulationData.txt")))
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, (this.csvfilename+".txt"))))
             {
                 foreach (string line in lines)
                     outputFile.WriteLine(line);
