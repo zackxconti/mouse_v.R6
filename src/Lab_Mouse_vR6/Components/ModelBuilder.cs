@@ -44,6 +44,7 @@ namespace Lab_Mouse.Components
         public IGH_Component datagencomponent;
         public GH_Document doc;
         public string csvfilepath;
+        public string status;
 
 
 
@@ -63,6 +64,8 @@ namespace Lab_Mouse.Components
             this.datagencomponent = null;
             this.doc = null;
             this.csvfilepath = null;
+
+            
         }
 
         /// <summary>
@@ -87,6 +90,10 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (this.model == null){
+
+                updateMessage("nomod");
+            }
             getdatagenInputParams(); // get info about sliders, outputs, directory, and datagen component connected to this model builder
         }
 
@@ -166,6 +173,8 @@ namespace Lab_Mouse.Components
         public void RunSolver_BuildBN() // TODO: one 'runsolver()' function needed for each button 
 
         {
+            status = "bldgmod";
+            updateMessage(status);
             //getdatagenInputParams(); // this function does not need to be called here because it is being called in SolveInstance.
             /*
             // Get the document this component belongs to.
@@ -315,6 +324,41 @@ namespace Lab_Mouse.Components
                 ExpireSolution(true);
             }
 
+            status = "bltmod";
+            updateMessage(status);
+        }
+
+        private void updateMessage(string query)
+        {
+            if (query == "bldgmod")
+            {
+
+                Message = "building model...";
+
+            }
+
+            if (query == "nomod")
+            {
+                Message = "no model loaded.";
+            }
+
+
+            if (query == "bltmod")
+            {
+                Message = "mode is built.";
+            }
+
+            if (query == "updatingprob")
+            {
+                Message = "updating probabilities";
+            }
+
+            if (query == "probupdated")
+            {
+                Message = "probabilities updated";
+            }
+
+            ExpireSolution(true);
         }
 
         string GetLine(Dictionary<string, List<List<double>>> d)
@@ -333,6 +377,9 @@ namespace Lab_Mouse.Components
 
         public void RunSolver_UpdateBN() // TODO: one 'runsolver()' function needed for each button 
         {
+            status = "updatingprob";
+            updateMessage(status);
+
             string IPCupdatePath = Path.Combine(this.directory[0], "Lab_Mouse\\IPC_scripts\\updateButton_IPC.py");
             Dictionary<string, List<double>> evidence = new Dictionary<string, List<double>>();
             Dictionary<string, List<double>> allposteriors;
@@ -412,13 +459,11 @@ namespace Lab_Mouse.Components
                     ExpireSolution(true);
                 }
 
+                status = "probupdated";
+                updateMessage(status);
+
             }
 
-           
-
-            //update Psliders
-
-            //update Poutputs
         }
 
         public void RunSolver_ResetBN()

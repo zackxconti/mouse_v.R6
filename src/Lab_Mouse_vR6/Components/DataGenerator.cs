@@ -30,9 +30,13 @@ namespace Lab_Mouse.Components
         public List<string> pluggedSliderNames;
         public List<string> pluggedOutputNames;
         public string csvfilepath;
+        public string directory;
+        public GH_Document doc;
+        public string status;
         // public List<Grasshopper.Kernel.IGH_DocumentObject> pluggedSliders;
         //public List<Grasshopper.GUI.GH_Slider> pluggedSliders;
 
+        /*
         private bool m_absolute = false;
         public bool Absolute
         {
@@ -50,7 +54,7 @@ namespace Lab_Mouse.Components
                 }
             }
         }
-
+        */
         public DataGenerator()
           : base("DataGenerator", 
                 "datagen",
@@ -67,8 +71,46 @@ namespace Lab_Mouse.Components
             this.pluggedPOutputs = new List<POutput>();
             this.samplingAlgorithm = "sobol"; // by default,sobol sequece is used 
             this.csvfilepath = null;
+            this.directory = null;
+            this.doc = OnPingDocument();
+
+            updateparams();
+            updateMessage("dataload");
 
 
+        }
+
+        private void updateMessage(string query)
+        {
+            if (query == "dataload")
+            {
+    
+                Message = "Data is loaded.";
+                
+            }
+
+            if (query == "dataempty")
+            {
+                Message = "No data is loaded.";
+            }
+
+
+            if (query == "datagencomplete")
+            {
+                Message = "Data is loaded.";
+            }
+
+            if (query == "sampling")
+            {
+                Message = "generating samples...";
+            }
+
+            if (query == "datagen")
+            {
+                Message = "generating data...";
+            }
+
+            ExpireSolution(true);
         }
 
         /// <summary>
@@ -101,6 +143,9 @@ namespace Lab_Mouse.Components
             this.m_attributes = new Attributes_Custom(this);
         }
 
+        //Grasshopper.Kernel.GH_Document.SolutionEnd(GH_Document doc)
+        
+
 
         /// <summary>
         /// This is the method that actually does the work.
@@ -108,9 +153,16 @@ namespace Lab_Mouse.Components
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            
+            updateparams();
+
+
+            //updateMessage(status);
+            ExpireSolution(true);
+            //updateMessage("dataload");
             DA.SetData(0, this.csvdata);
             
-
+    
             
         }
 
@@ -169,6 +221,33 @@ namespace Lab_Mouse.Components
         private void SolverClicked(object sender, EventArgs eventArgs)
         {
             RunSolver();
+        }
+
+
+        public void updateparams()
+        {
+            GH_Document doc = OnPingDocument();
+            if (doc == null) return;
+            string dir=null;
+            foreach (GH_String dat in Params.Input[2].Sources[0].VolatileData.AllData(true))
+
+            {
+                dir = dat.Value;
+            }
+            this.directory = dir;
+
+            string projfilename = Path.GetFileNameWithoutExtension(doc.FilePath);
+            string csvfp = Path.Combine(this.directory, projfilename + "_CSVdata.txt");
+
+            if (File.Exists(csvfp))
+            {
+                this.csvfilepath = csvfp;
+                status = "dataload";
+            }
+            else
+            {
+                status = "dataempty";
+            }
         }
 
         public List<List<double>> readcsv(string filename)
@@ -289,6 +368,11 @@ namespace Lab_Mouse.Components
 
         public void RunSolver()
         {
+            //updateMessage("sampling");
+            //ExpireSolution(true);
+            status = "sampling";
+            updateMessage(status);
+
             // Get the document this component belongs to.
             GH_Document doc = OnPingDocument();
             if (doc == null) return;
@@ -364,14 +448,17 @@ namespace Lab_Mouse.Components
                 //string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
 
                 List <System.Object> Arguments = new List<System.Object>();
-                Arguments.Add(ranges_filepath);
+                //Arguments.Add(ranges_filepath);
+                Arguments.Add(this.directory);
 
                 //string type = "sobol";
                 Arguments.Add(this.samplingAlgorithm);
 
-                int samplesize = 200;
+                int samplesize = 100;
                 Arguments.Add(samplesize.ToString());
-            
+
+
+
                 // Generate samples by calling sampling Python script //
                 List<List<double>> Samples = runPythonScript(samplingscript_filepath, Arguments);
 
@@ -448,7 +535,10 @@ namespace Lab_Mouse.Components
                 // we can generate a bunch of solutions.
                 // We will also harvest the resulting outcome and print each state to the command line.
 
-
+                //updateMessage("datagen");
+                // ExpireSolution(true);
+                status = "datagen";
+                updateMessage(status);
                 List<List<double>> csvd = new List<List<double>>();
 
                 // Assign Samples to sliders as SliderValues 
@@ -504,6 +594,11 @@ namespace Lab_Mouse.Components
                 
                 // Write csv data to text file in user-specified directory
                 this.csvdata.writeCSV(directory);
+
+                //updateMessage("datagencomplete");
+                //ExpireSolution(true);
+                status = "datagencomplete";
+                updateMessage(status);
             }
         }
     }
@@ -560,6 +655,9 @@ namespace Lab_Mouse.Components
                 System.Drawing.RectangleF rec = ButtonBounds;
                 if (rec.Contains(e.CanvasLocation))
                 {
+                    //call check if file exists function
+
+
                     //int num  = numSld;
 
                     //if no data has been generated
@@ -581,9 +679,7 @@ namespace Lab_Mouse.Components
                             }
 
                             own.ExpireSolution(true);
-
-                            // generate data 
-                            own.Message = "Generating data...";
+     
                             datgen.RunSolver();
                         }
                         else if (result == DialogResult.No)
@@ -602,7 +698,7 @@ namespace Lab_Mouse.Components
 
                             if (result == DialogResult.Yes)
                             {
-                                //own.Message = "Generating data...";
+       
                                 datgen.RunSolver();
                             }
                             else if (result == DialogResult.No)
