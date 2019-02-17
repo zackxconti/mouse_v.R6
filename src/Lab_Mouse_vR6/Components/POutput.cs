@@ -22,7 +22,7 @@ namespace Lab_Mouse.Components
         /// Initializes a new instance of the MyComponent1 class.
         public List<double> probabilities;
         private List<double> priors = new List<double>(); // need to find ModelBuilder and take prior 
-        private List<List<double>> binranges;
+        private List<List<double>> binranges= new List<List<double>>();
         public bool customPD = false;
 
         // default starting string, need to be the same as the default starting probability distribution
@@ -68,10 +68,9 @@ namespace Lab_Mouse.Components
             this.draw_flag = "h";
 
             this.Probabilities = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 , 0.0};
-
+            
             this.BinRanges = null;
-
-    }
+        }
 
         // get user input and construct default probability list 
         public bool getUserInput()
@@ -208,6 +207,17 @@ namespace Lab_Mouse.Components
             }
 
             this.Probabilities = tempPDList;
+                
+            List<double> defaultProbability = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+
+            var firstNotSecond = this.Probabilities.Except(defaultProbability).ToList();
+            var secondNotFirst = defaultProbability.Except(this.Probabilities).ToList();
+
+            // check if probabilities is different from the default value
+            if (!firstNotSecond.Any() && !secondNotFirst.Any())
+            {
+                this.evidence = false;
+            }
 
             ExpireSolution(true);
         }
@@ -232,12 +242,13 @@ namespace Lab_Mouse.Components
     {
        
         POutput own;
+        bool binSelected = false;
+        int selectedBin;
         
         
         public POutputAttributes(POutput owner) : base(owner)
         {
             own = owner;
-    
         }
 
         // minimum size for resizing
@@ -293,6 +304,7 @@ namespace Lab_Mouse.Components
         private RectangleF[] getBackgroundBins(List<double> probabilities)
         {
             int n = probabilities.Count;
+            Rhino.RhinoApp.WriteLine(n.ToString());
             if (n != 1)
             {
                 RectangleF[] backgroundBins = new RectangleF[n];
@@ -470,7 +482,12 @@ namespace Lab_Mouse.Components
            
             own.evidence = true;
             own.doubleClicked = true;
-   
+
+            List<double> defaultProbability = new List<double> { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+
+            var firstNotSecond = own.Probabilities.Except(defaultProbability).ToList();
+            var secondNotFirst = defaultProbability.Except(own.Probabilities).ToList();
+
             // for each bin
             for (int i = 0; i < rec.Length; i++)
             {
@@ -478,8 +495,6 @@ namespace Lab_Mouse.Components
                 if (rec[i].Contains(e.CanvasLocation)) 
                 {
 
-                   
-                    
                     int pos = rec.Length - i - 1;
 
                     
@@ -488,26 +503,36 @@ namespace Lab_Mouse.Components
                         // set all non-evidence bins to zero probability
                         if (j != pos)
                         {
-                            
                             own.Probabilities[j] = 0;
-                           
                         }
                     }
 
 
                     // if unclick
                     if (own.Probabilities[pos] == 1)
-                    { 
+                    {
+
                         own.Probabilities = new List<double>(own.Priors); // set back to priors
                         own.ExpireSolution(true);
-
+                        selectedBin = pos;
+                        binSelected = false;
                     }
 
                     // if bin has mouse in it
                     else
                     {
                         own.Probabilities[pos] = 1;
-                        
+                        selectedBin = pos;
+                        binSelected = true;
+                    }
+
+                    firstNotSecond = own.Probabilities.Except(defaultProbability).ToList();
+                    secondNotFirst = defaultProbability.Except(own.Probabilities).ToList();
+
+                    // check if probabilities is different from the default value
+                    if (!firstNotSecond.Any() && !secondNotFirst.Any())
+                    {
+                        own.evidence = false;
                     }
 
                     Owner.OnDisplayExpired(true);
@@ -567,6 +592,11 @@ namespace Lab_Mouse.Components
             else
             {
                 componentName = "Probabilities (" + own.sourceName + " )";
+            }
+
+            if (binSelected)
+            {
+                componentName = "Probabilities (" + own.sourceName + " <="+ own.BinRanges[selectedBin][1].ToString() +  ")";
             }
 
             if ((own.evidence == true) && (own.doubleClicked == true))
@@ -670,6 +700,7 @@ namespace Lab_Mouse.Components
 
             // Rui 
             // render background bins
+
             RectangleF[] backgroundBins = getBackgroundBins(own.Probabilities);
             graphics.DrawRectangles(pen3, backgroundBins);
             graphics.FillRectangles(sb, backgroundBins);
@@ -690,8 +721,8 @@ namespace Lab_Mouse.Components
             {
                 for (int i = 0; i < numbins; i++)
                 {
-                    //textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + own.binRange[numbins-1-i][1], 3, 0);
-                    textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, Math.Round(own.BinRanges[numbins - 1 - i][0],2) + "<" + Math.Round(own.BinRanges[numbins - 1 - i][1],2), 3, 0);
+                    //textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, "<=" + own.BinRanges[numbins - 1 - i][1], 3, 0);
+                    textCapsules[i] = GH_Capsule.CreateTextCapsule(textholderBounds[i], textholderBounds[i], GH_Palette.Normal, Math.Round(own.BinRanges[numbins - 1 - i][0], 2) + "<" + Math.Round(own.BinRanges[numbins - 1 - i][1], 2), 3, 0);
                     textCapsules[i].Render(graphics, Selected, Owner.Locked, false);
                 }
             }
