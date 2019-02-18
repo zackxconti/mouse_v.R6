@@ -294,8 +294,9 @@ namespace Lab_Mouse.Components
                     //Console.WriteLine(s);
                     //Console.(s);
 
-                    data.Add(row);
+                    
                 }
+                data.Add(row);
             }
 
             return data;
@@ -444,6 +445,7 @@ namespace Lab_Mouse.Components
 
                 /// run python script to generate samples ///
                 string samplingscript_filepath = Path.Combine(directory, "Lab_Mouse\\IPC_scripts\\datagen_IPC.py");
+                //string samplingscript_filepath = "Lab_Mouse\\IPC_scripts\\datagen_IPC.py";
 
                 //string samplingscript_filepath = "C:\\Users\\zac067\\Desktop\\intercommunication_script.py"; // TODO: internalise this script in the component dll?
 
@@ -454,7 +456,7 @@ namespace Lab_Mouse.Components
                 //string type = "sobol";
                 Arguments.Add(this.samplingAlgorithm);
 
-                int samplesize = 100;
+                int samplesize = 5000;
                 Arguments.Add(samplesize.ToString());
 
 
